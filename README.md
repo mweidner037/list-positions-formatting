@@ -1,23 +1,11 @@
-# Template Typescript lib
+# list-formatting
 
-Template for a TypeScript library meant to be published on npm.
+Inline formatting for a list, e.g., collaborative rich-text
 
-Setup and package versions should be current as of Feb 19 2023.
+## About
 
-## Files
+Peritext-style formatting spans that you can apply to any list.
 
-- `src/`: Source folder. Entry point is `index.ts`. Built to `build/esm` and `build/commonjs`.
-- `test/`: Test folder. Runs using mocha.
+CRDT-inspired, but not actually a CRDT.
 
-## Commands
-
-- Build with `npm run build`.
-- Test, lint, etc. with `npm run test`.
-- Publish with `npm publish`.
-
-## TODO
-
-- Delete `.git`, then setup your own Git repo.
-- Search for TODO.
-- Write your library in `src/`.
-- Replace this README.
+Uses Positions from the [list-positions](https://github.com/mweidner037/list-positions) library.

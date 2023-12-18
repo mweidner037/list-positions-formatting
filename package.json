@@ -1,19 +1,22 @@
 {
-  "name": "TODO",
+  "name": "list-formatting",
   "version": "0.1.0",
-  "description": "TODO",
+  "description": "Inline formatting for a list, e.g., collaborative rich-text",
   "author": "Matthew Weidner",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/TODO/issues"
+    "url": "https://github.com/mweidner037/list-formatting/issues"
   },
-  "homepage": "https://github.com/TODO/tree/master/#readme",
+  "homepage": "https://github.com/mweidner037/list-formatting/tree/master/#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TODO.git"
+    "url": "git+https://github.com/mweidner037/list-formatting.git"
   },
   "keywords": [
-    "TODO"
+    "formatting",
+    "rich text",
+    "collaboration",
+    "CRDT"
   ],
   "module": "build/esm/index.js",
   "browser": "build/esm/index.js",

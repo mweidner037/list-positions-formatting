@@ -1,4 +1,11 @@
-import { LexList, List, Order, Outline, Position } from "list-positions";
+import {
+  BunchIDs,
+  LexList,
+  List,
+  Order,
+  Outline,
+  Position,
+} from "list-positions";
 
 // Allow "any" as the span value type.
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -35,51 +42,114 @@ export type FormattedRange = {
   // TODO: activeSpans: Map<string, S>? Precludes combining equi-formatted neighbors.
 };
 
+export type FormatChange = {
+  start: Anchor;
+  end: Anchor;
+  key: string;
+  // null if deleted.
+  value: any;
+  // null if previously not present.
+  previousValue: any;
+  // The complete new format (excluding nulls).
+  format: Record<string, any>;
+};
+
 // TODO: methods to convert a Span/Range + List into indexed slice.
 // And vice versa (take indices and "expand" behavior to get Span).
 
 // TODO: mutators return changes.
 
-export class Formatting<S extends AbstractSpan> {
-  constructor(private readonly compareSpans: (a: S, b: S) => number) {}
-
-  // TODO: accept multiple in spread arg? If not for loading, so less tempted to overflow stack.
-  addSpan(span: S): void {}
-
-  // TODO: reference equality? Or can we make it work with compare === 0?
-  deleteSpan(span: S): void {}
-
+// Needs a compareSpans function, hence why "abstract" (not really).
+export class AbstractFormatting<S extends AbstractSpan> {
   /**
-   * All spans, regardless of whether they are currently winning.
+   * All spans in sort order.
    *
-   * No particular order.
-   *
-   * Use for saving (w/ addSpans to load).
-   *
-   * TODO: explicit saving and loading that uses more internal format
-   * for faster loading? E.g. sorting by compareSpans. (Warn not to change order.)
+   * Readonly except for this.load.
    */
-  *spans(): IterableIterator<S> {}
+  private orderedSpans: S[];
 
-  getFormat(pos: Position): Record<string, any> {}
+  constructor(private readonly compareSpans: (a: S, b: S) => number) {
+    this.orderedSpans = [];
+  }
 
-  // getActiveSpans(pos: Position): Map<string, S> {}
-
-  // For each key, nonempty and in precedence order.
-  // getAllSpans(pos: Position): Map<string, S[]> {}
-
+  // Stores the literal reference for access in spans() etc. -
+  // so you can use === comparison later.
+  // Skips redundant spans (according to compareSpans).
   /**
-   * The whole list as a series of ranges with their current formats.
-   *
-   * In order; starts with open minPos, ends with open maxPos.
+   * @returns Format changes in order (not nec contiguous or the whole span).
    */
-  formatted(): FormattedRange[] {}
+  addSpan(span: S): FormatChange[] {
+    const [index, existing] = this.locateSpan(span);
+    if (existing !== undefined) return; // Already exists.
 
-  // TODO: version that takes a List (etc.) and directly gives you index-ranges?
+    this.orderedSpans.splice(index, 0, span);
 
-  // TODO: insert helpers (check and repair format at a pos). Maybe with newSpan callback in constructor.
+    // TODO: update maps
+  }
+
+  // Deletes using compareSpans equality.
+  // Use delete + add new to "mutate" a span
+  /**
+   * @returns Format changes in order (not nec contiguous or the whole span).
+   */
+  deleteSpan(span: S): FormatChange[] {
+    const [index, existing] = this.locateSpan(span);
+    if (existing === undefined) return; // Already deleted.
+
+    this.orderedSpans.splice(index, 1);
+
+    // TODO: update maps
+  }
 
   /**
+   * Returns the index where span should be inserted into orderedSpans
+   * (or is already), plus the existing copy of span. Equality is
+   * determined using compareSpans.
+   */
+  private locateSpan(span: S): [index: number, existing: S | undefined] {
+    if (this.orderedSpans.length === 0) return [0, undefined];
+
+    // Common case: greater than all spans.
+    if (this.compareSpans(span, this.orderedSpans.at(-1)!) > 0) {
+      return [this.orderedSpans.length, undefined];
+    }
+
+    // Find index.
+    const minus10 = Math.max(0, this.orderedSpans.length - 10);
+    if (this.compareSpans(span, this.orderedSpans[minus10]) >= 0) {
+      // Common case: span is "recent" - among the last 10 spans.
+      // Search those linearly in reverse.
+      for (let i = this.orderedSpans.length - 1; i >= minus10; i--) {
+        const iCompare = this.compareSpans(span, this.orderedSpans[i]);
+        if (iCompare === 0) return [i, this.orderedSpans[i]];
+        if (iCompare > 0) return [i + 1, undefined];
+      }
+      // If we get here, compareSpans(span, @minus10) must be inconsistent.
+      throw new Error("compareSpans is inconsistent");
+    } else {
+      // Binary search the spans at index < minus10. Using
+      // https://en.wikipedia.org/wiki/Binary_search_algorithm#Procedure_for_finding_the_leftmost_element
+      // which computes the "rank" of span - what we want.
+      let L = 0;
+      let R = minus10;
+      while (L < R) {
+        const m = Math.floor((L + R) / 2);
+        if (this.compareSpans(span, this.orderedSpans[m]) > 0) L = m + 1;
+        else R = m;
+      }
+      const maybeExisting = this.orderedSpans[R];
+      return [
+        R,
+        this.compareSpans(span, maybeExisting) === 0
+          ? maybeExisting
+          : undefined,
+      ];
+    }
+  }
+
+  /**
+   * Does not change the state - gives you AbstractSpans that you can fill out
+   * and pass to addSpan.
    *
    * @throws If `list.positionAt(index)` is min or max Position.
    */
@@ -100,11 +170,9 @@ export class Formatting<S extends AbstractSpan> {
       if (typeof listPos === "string") return list.order.unlex(listPos);
       else return listPos;
     }
+
     const pos = positionAt(index);
-    if (
-      Order.equalsPosition(pos, Order.MIN_POSITION) ||
-      Order.equalsPosition(pos, Order.MAX_POSITION)
-    ) {
+    if (pos.bunchID === BunchIDs.ROOT) {
       throw new Error(
         "list.positionAt(index) is the min or max Position: " +
           JSON.stringify(pos)
@@ -121,7 +189,7 @@ export class Formatting<S extends AbstractSpan> {
         // Already formatted correctly.
         needsFormat.delete(key);
       } else if (!needsFormat.has(key)) {
-        // We don't want this format - need to unmark it.
+        // We don't want this format - need to override it.
         needsFormat.set(key, null);
       }
     }
@@ -141,5 +209,52 @@ export class Formatting<S extends AbstractSpan> {
       newSpans.push({ start, end, key, value });
     }
     return newSpans;
+  }
+
+  clear(): void {}
+
+  /**
+   * @throws If pos is min or max Position.
+   */
+  getFormat(pos: Position): Record<string, any> {}
+
+  // getActiveSpans(pos: Position): Map<string, S> {}
+
+  // For each key, nonempty and in precedence order.
+  // getAllSpans(pos: Position): Map<string, S[]> {}
+
+  /**
+   * The whole list as a series of ranges with their current formats.
+   *
+   * In order; starts with open minPos, ends with open maxPos.
+   */
+  formatted(): FormattedRange[] {}
+
+  // TODO: version that takes a List (etc.) and directly gives you index-ranges?
+
+  /**
+   * All spans, regardless of whether they are currently winning.
+   *
+   * In compareSpans order.
+   *
+   * TODO: explicit saving and loading that uses more internal format
+   * for faster loading? E.g. sorting by compareSpans. (Warn not to change order.)
+   */
+  spans(): IterableIterator<S> {
+    return this.orderedSpans[Symbol.iterator]();
+  }
+
+  // Save format: all spans in compareSpans order (same as spans()).
+  save(): S[] {
+    return this.orderedSpans.slice();
+  }
+
+  // Overwrites existing state. (To merge, call addSpans in a loop.)
+  // To see result, call formatted.
+  load(savedState: S[]): void {
+    this.clear();
+
+    this.orderedSpans = savedState.slice();
+    // TODO: fill maps
   }
 }

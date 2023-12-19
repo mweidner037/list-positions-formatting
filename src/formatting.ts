@@ -11,6 +11,9 @@ import {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
+// TODO: treat all falsy values like null? So you can use e.g. bold: false,
+// and so undefined doesn't cause confusion. See what Yjs, Quill, Automerge do.
+
 export type Anchor = {
   /**
    * Could be min or max position, but spans can't include them.
@@ -22,6 +25,10 @@ export type Anchor = {
    */
   before: boolean;
 };
+
+export function equalsAnchor(a: Anchor, b: Anchor): boolean {
+  return a.before === b.before && Order.equalsPosition(a.pos, b.pos);
+}
 
 /**
  * Missing metadata needed for comparison (incl equality check),
@@ -67,9 +74,26 @@ export class AbstractFormatting<S extends AbstractSpan> {
    * Readonly except for this.load.
    */
   private orderedSpans: S[];
+  /**
+   * A view of orderedSpans that is designed for easy querying.
+   * This is mostly as described in the Peritext paper.
+   */
+  private readonly formatList: List<FormatData<S>>;
 
-  constructor(private readonly compareSpans: (a: S, b: S) => number) {
+  /**
+   *
+   * @param order The source of Positions that you will use as args.
+   * Usually your list's `.order`.
+   * @param compareSpans
+   */
+  constructor(
+    order: Order,
+    private readonly compareSpans: (a: S, b: S) => number
+  ) {
     this.orderedSpans = [];
+    this.formatList = new List(order);
+    // Set the start anchor so you can always "go left" to find FormatData.
+    this.formatList.set(Order.MIN_POSITION, { after: new Map() });
   }
 
   // Stores the literal reference for access in spans() etc. -
@@ -80,11 +104,76 @@ export class AbstractFormatting<S extends AbstractSpan> {
    */
   addSpan(span: S): FormatChange[] {
     const [index, existing] = this.locateSpan(span);
-    if (existing !== undefined) return; // Already exists.
+    if (existing !== undefined) return []; // Already exists.
 
     this.orderedSpans.splice(index, 0, span);
 
-    // TODO: update maps
+    // Update this.formatList and calculate the changes, in several steps.
+
+    // 1. Create FormatData at the start and end anchors if needed,
+    // copying the previous anchor with data.
+
+    this.createData(span.start);
+    this.createData(span.end);
+
+    // 2. Merge span into all FormatData in the range
+    // [startPos, endPos). While doing so, build slices for the events
+    // later.
+
+    const sliceBuilder = new SliceBuilder<FormatChangeInternal>(
+      formatChangeEquals
+    );
+
+    const start =
+      span.start.pos === null
+        ? 0
+        : this.formatList.indexOfPosition(span.start.pos);
+    // If end is an after anchor, { end.pos, "before" } is handled after the loop.
+    const end =
+      span.end.pos === null
+        ? this.formatList.length
+        : this.formatList.indexOfPosition(span.end.pos);
+    for (let i = start; i < end; i++) {
+      const pos = this.formatList.positionAt(i);
+      const data = this.formatList.get(pos)!;
+      if (data.before !== undefined) {
+        this.updateOne({ pos, before: true }, data.before, sliceBuilder, span);
+      }
+      if (data.after !== undefined) {
+        this.updateOne({ pos, before: false }, data.after, sliceBuilder, span);
+      }
+    }
+
+    if (span.end.pos !== null && !span.end.before) {
+      // span ends at an after anchor; update { end.pos, "before" } if present.
+      const beforeEnd = this.formatList.get(span.end.pos)?.before;
+      if (beforeEnd !== undefined) {
+        this.updateOne(
+          { pos: span.end.pos, before: true },
+          beforeEnd,
+          sliceBuilder,
+          span
+        );
+      }
+    }
+
+    // 3. Return FormatChanges for spans that actually changed.
+
+    const slices = sliceBuilder.finish(span.end);
+    const changes: FormatChange[] = [];
+    for (const slice of slices) {
+      if (slice.data !== null && slice.data.previousValue !== span.value) {
+        changes.push({
+          start: slice.start,
+          end: slice.end,
+          key: span.key,
+          value: span.value,
+          previousValue: slice.data.previousValue,
+          format: slice.data.format,
+        });
+      }
+    }
+    return changes;
   }
 
   // Deletes using compareSpans equality.
@@ -94,7 +183,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
    */
   deleteSpan(span: S): FormatChange[] {
     const [index, existing] = this.locateSpan(span);
-    if (existing === undefined) return; // Already deleted.
+    if (existing === undefined) return []; // Already deleted.
 
     this.orderedSpans.splice(index, 1);
 
@@ -145,6 +234,72 @@ export class AbstractFormatting<S extends AbstractSpan> {
           : undefined,
       ];
     }
+  }
+
+  /**
+   * Creates FormatData at anchor if it doesn't already exist,
+   * copying the correct values from the previous FormatData.
+   */
+  private createData(anchor: Anchor): void {
+    // We never need to create start or end: start is created in the
+    // constructor, and end is not stored.
+    if (anchor.pos === null) return;
+
+    let data = this.formatList.get(anchor.pos);
+    if (data === undefined) {
+      data = {};
+      this.formatList.set(anchor.pos, data);
+    }
+
+    if (anchor.before) {
+      if (data.before !== undefined) return;
+
+      data.before = this.copyPrevAnchor(anchor.pos);
+    } else {
+      if (data.after !== undefined) return;
+
+      if (data.before !== undefined) data.after = new Map(data.before);
+      else data.after = this.copyPrevAnchor(anchor.pos);
+    }
+  }
+
+  /**
+   * Returns a copy of the Map for the last anchor before { pos, before: true }.
+   *
+   * Assumes pos is present in this.formatList and not Order.MIN_POSITION.
+   */
+  private copyPrevAnchor(pos: Position): Map<string, S> {
+    const posIndex = this.formatList.indexOfPosition(pos);
+    // posIndex > 0 by assumption.
+    const prevData = this.formatList.getAt(posIndex - 1);
+    return new Map(prevData.after ?? prevData.before);
+  }
+
+  private updateOne(
+    anchor: Anchor,
+    anchorData: Map<string, S>,
+    sliceBuilder: SliceBuilder<FormatChangeInternal>,
+    span: S
+  ) {
+    const previousSpan = anchorData.get(span.key);
+    if (this.wins(span, previousSpan)) {
+      anchorData.set(span.key, span);
+      sliceBuilder.add(anchor, {
+        previousValue: previousSpan?.value,
+        format: spansToRecord(anchorData),
+      });
+    } else {
+      sliceBuilder.add(anchor, null);
+    }
+  }
+
+  /**
+   * Returns whether newSpans wins over oldSpan, either in the compareSpans
+   * order or because oldSpan is undefined.
+   */
+  private wins(newSpan: S, oldSpan: S | undefined): boolean {
+    if (oldSpan === undefined) return true;
+    return this.compareSpans(newSpan, oldSpan) > 0;
   }
 
   /**
@@ -257,4 +412,132 @@ export class AbstractFormatting<S extends AbstractSpan> {
     this.orderedSpans = savedState.slice();
     // TODO: fill maps
   }
+}
+
+/**
+ * formatList value type.
+ *
+ * Note: after deletions, both fields may be empty, but they will never
+ * both be undefined.
+ */
+interface FormatData<S extends AbstractSpan> {
+  /**
+   * Spans starting at or strictly containing anchor { pos, before: true }.
+   *
+   * Specifically, maps from format key to the winning span for that key.
+   *
+   * May be undefined instead of empty.
+   */
+  before?: Map<string, S>;
+  /**
+   * Spans starting at or strictly containing anchor { pos, before: false }.
+   *
+   * Specifically, maps from format key to the winning span for that key.
+   *
+   * May be undefined instead of empty.
+   */
+  after?: Map<string, S>;
+}
+
+function spansToRecord(
+  spans: Map<string, AbstractSpan>
+): Record<string, unknown> {
+  const ans: Record<string, unknown> = {};
+  for (const [key, span] of spans) {
+    if (span.value !== null) ans[key] = span.value;
+  }
+  return ans;
+}
+
+/**
+ * A slice of CRichText.text with attached data, used by SliceBuilder.
+ */
+interface Slice<D> {
+  /** Inclusive. */
+  start: Anchor;
+  /** Exclusive. */
+  end: Anchor;
+  data: D;
+}
+
+/**
+ * Utility class for outputting ranges in Format events and formatted().
+ * This class takes care of omitting empty ranges and merging neighboring ranges
+ * with the same data (according to the constructor's `equals` arg).
+ */
+class SliceBuilder<D> {
+  private readonly slices: Slice<D>[] = [];
+  private prevAnchor: Anchor | null = null;
+  private prevData!: D;
+
+  constructor(readonly equals: (a: D, b: D) => boolean) {}
+
+  /**
+   * Add a new range with the given data and interval start, ending the
+   * previous interval.
+   *
+   * anchor must not be the end anchor.
+   */
+  add(anchor: Anchor, data: D): void {
+    if (this.prevAnchor !== null) {
+      // Record the previous call's data.
+      this.record(this.prevAnchor, anchor, this.prevData);
+    }
+    this.prevAnchor = anchor;
+    this.prevData = data;
+  }
+
+  /**
+   * Ends the most recent interval at nextAnchor and returns the
+   * finished slices.
+   */
+  finish(nextAnchor: Anchor): Slice<D>[] {
+    if (this.prevAnchor !== null) {
+      this.record(this.prevAnchor, nextAnchor, this.prevData);
+    }
+    return this.slices;
+  }
+
+  private record(start: Anchor, end: Anchor, data: D): void {
+    if (equalsAnchor(start, end)) return;
+
+    if (this.slices.length !== 0) {
+      const prevSlice = this.slices[this.slices.length - 1];
+      if (this.equals(prevSlice.data, data)) {
+        // Extend prevSlice.
+        prevSlice.end = end;
+        return;
+      }
+    }
+    // Add a new slice.
+    this.slices.push({ start, end, data });
+  }
+}
+
+function recordEquals(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>
+): boolean {
+  for (const [key, value] of Object.entries(a)) {
+    if (b[key] !== value) return false;
+  }
+  for (const [key, value] of Object.entries(b)) {
+    if (a[key] !== value) return false;
+  }
+  return true;
+}
+
+type FormatChangeInternal = {
+  previousValue: any;
+  format: Record<string, unknown>;
+} | null;
+
+function formatChangeEquals(
+  a: FormatChangeInternal,
+  b: FormatChangeInternal
+): boolean {
+  if (a === null || b === null) return a === b;
+  return (
+    a.previousValue === b.previousValue && recordEquals(a.format, b.format)
+  );
 }

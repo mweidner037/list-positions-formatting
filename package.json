@@ -33,7 +33,9 @@
     "access": "public"
   },
   "sideEffects": false,
-  "dependencies": {},
+  "dependencies": {
+    "list-positions": "^0.2.0"
+  },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@types/chai": "^4.3.4",

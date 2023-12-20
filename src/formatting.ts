@@ -103,12 +103,17 @@ export class AbstractFormatting<S extends AbstractSpan> {
    * @returns Format changes in order (not nec contiguous or the whole span).
    */
   addSpan(span: S): FormatChange[] {
-    const [index, existing] = this.locateSpan(span);
-    if (existing !== undefined) return []; // Already exists.
-
+    const index = this.locateSpan(this.orderedSpans, span);
+    if (
+      index < this.orderedSpans.length &&
+      this.compareSpans(span, this.orderedSpans[index]) === 0
+    ) {
+      // Already exists.
+      return [];
+    }
     this.orderedSpans.splice(index, 0, span);
 
-    // Update this.formatList and calculate the changes, in several steps.
+    // Update this.formatList and calculate the changes, in several steps:
 
     // 1. Create FormatData at the start and end anchors if needed,
     // copying the previous anchor with data.
@@ -182,39 +187,42 @@ export class AbstractFormatting<S extends AbstractSpan> {
    * @returns Format changes in order (not nec contiguous or the whole span).
    */
   deleteSpan(span: S): FormatChange[] {
-    const [index, existing] = this.locateSpan(span);
-    if (existing === undefined) return []; // Already deleted.
-
+    const index = this.locateSpan(this.orderedSpans, span);
+    if (
+      index === this.orderedSpans.length ||
+      this.compareSpans(span, this.orderedSpans[index]) !== 0
+    ) {
+      // Not present.
+      return [];
+    }
     this.orderedSpans.splice(index, 1);
 
     // TODO: update maps
   }
 
   /**
-   * Returns the index where span should be inserted into orderedSpans
-   * (or is already), plus the existing copy of span. Equality is
-   * determined using compareSpans.
+   * Returns the index where span should be inserted into list
+   * (or its current index, if present). Comparisons use compareSpan
+   * and assume list is sorted in ascending order with no duplicates.
    */
-  private locateSpan(span: S): [index: number, existing: S | undefined] {
-    if (this.orderedSpans.length === 0) return [0, undefined];
+  private locateSpan(list: S[], span: S): number {
+    if (list.length === 0) return 0;
 
     // Common case: greater than all spans.
-    if (this.compareSpans(span, this.orderedSpans.at(-1)!) > 0) {
-      return [this.orderedSpans.length, undefined];
+    if (this.compareSpans(span, list.at(-1)!) > 0) {
+      return list.length;
     }
 
     // Find index.
-    const minus10 = Math.max(0, this.orderedSpans.length - 10);
-    if (this.compareSpans(span, this.orderedSpans[minus10]) >= 0) {
+    const minus10 = Math.max(0, list.length - 10);
+    if (this.compareSpans(span, list[minus10]) >= 0) {
       // Common case: span is "recent" - among the last 10 spans.
       // Search those linearly in reverse.
-      for (let i = this.orderedSpans.length - 1; i >= minus10; i--) {
-        const iCompare = this.compareSpans(span, this.orderedSpans[i]);
-        if (iCompare === 0) return [i, this.orderedSpans[i]];
-        if (iCompare > 0) return [i + 1, undefined];
+      for (let i = list.length - 1; i >= minus10; i--) {
+        if (this.compareSpans(span, list[1]) > 0) return i + 1;
       }
-      // If we get here, compareSpans(span, @minus10) must be inconsistent.
-      throw new Error("compareSpans is inconsistent");
+      // If we get here, the span is == minus10. TODO: check.
+      return minus10;
     } else {
       // Binary search the spans at index < minus10. Using
       // https://en.wikipedia.org/wiki/Binary_search_algorithm#Procedure_for_finding_the_leftmost_element
@@ -223,16 +231,10 @@ export class AbstractFormatting<S extends AbstractSpan> {
       let R = minus10;
       while (L < R) {
         const m = Math.floor((L + R) / 2);
-        if (this.compareSpans(span, this.orderedSpans[m]) > 0) L = m + 1;
+        if (this.compareSpans(span, list[m]) > 0) L = m + 1;
         else R = m;
       }
-      const maybeExisting = this.orderedSpans[R];
-      return [
-        R,
-        this.compareSpans(span, maybeExisting) === 0
-          ? maybeExisting
-          : undefined,
-      ];
+      return R;
     }
   }
 
@@ -268,29 +270,37 @@ export class AbstractFormatting<S extends AbstractSpan> {
    *
    * Assumes pos is present in this.formatList and not Order.MIN_POSITION.
    */
-  private copyPrevAnchor(pos: Position): Map<string, S> {
+  private copyPrevAnchor(pos: Position): Map<string, S[]> {
     const posIndex = this.formatList.indexOfPosition(pos);
     // posIndex > 0 by assumption.
     const prevData = this.formatList.getAt(posIndex - 1);
-    return new Map(prevData.after ?? prevData.before);
+    const toCopy = prevData.after ?? prevData.before!;
+    const copy = new Map<string, S[]>();
+    for (const [key, spans] of toCopy) {
+      copy.set(key, spans.slice());
+    }
+    return copy;
   }
 
   private updateOne(
     anchor: Anchor,
-    anchorData: Map<string, S>,
+    anchorData: Map<string, S[]>,
     sliceBuilder: SliceBuilder<FormatChangeInternal>,
     span: S
   ) {
-    const previousSpan = anchorData.get(span.key);
-    if (this.wins(span, previousSpan)) {
-      anchorData.set(span.key, span);
+    let spans = anchorData.get(span.key);
+    if (spans === undefined) {
+      spans = [];
+      anchorData.set(span.key, spans);
+    }
+    const index = this.locateSpan(spans, span);
+    spans.splice(index, 0, span);
+    if (index === spans.length - 1) {
       sliceBuilder.add(anchor, {
-        previousValue: previousSpan?.value,
+        previousValue: spans.length === 1 ? null : spans[spans.length - 2],
         format: spansToRecord(anchorData),
       });
-    } else {
-      sliceBuilder.add(anchor, null);
-    }
+    } else sliceBuilder.add(anchor, null);
   }
 
   /**
@@ -428,7 +438,7 @@ interface FormatData<S extends AbstractSpan> {
    *
    * May be undefined instead of empty.
    */
-  before?: Map<string, S>;
+  before?: Map<string, S[]>;
   /**
    * Spans starting at or strictly containing anchor { pos, before: false }.
    *
@@ -436,14 +446,15 @@ interface FormatData<S extends AbstractSpan> {
    *
    * May be undefined instead of empty.
    */
-  after?: Map<string, S>;
+  after?: Map<string, S[]>;
 }
 
 function spansToRecord(
-  spans: Map<string, AbstractSpan>
+  anchorData: Map<string, AbstractSpan[]>
 ): Record<string, unknown> {
   const ans: Record<string, unknown> = {};
-  for (const [key, span] of spans) {
+  for (const [key, spans] of anchorData) {
+    const span = spans[spans.length - 1];
     if (span.value !== null) ans[key] = span.value;
   }
   return ans;

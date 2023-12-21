@@ -96,110 +96,6 @@ export class AbstractFormatting<S extends AbstractSpan> {
     this.formatList.set(Order.MIN_POSITION, { after: new Map() });
   }
 
-  // Stores the literal reference for access in spans() etc. -
-  // so you can use === comparison later.
-  // Skips redundant spans (according to compareSpans).
-  /**
-   * @returns Format changes in order (not nec contiguous or the whole span).
-   */
-  addSpan(span: S): FormatChange[] {
-    const index = this.locateSpan(this.orderedSpans, span);
-    if (
-      index < this.orderedSpans.length &&
-      this.compareSpans(span, this.orderedSpans[index]) === 0
-    ) {
-      // Already exists.
-      return [];
-    }
-    this.orderedSpans.splice(index, 0, span);
-
-    // Update this.formatList and calculate the changes, in several steps:
-
-    // 1. Create FormatData at the start and end anchors if needed,
-    // copying the previous anchor with data.
-
-    this.createData(span.start);
-    this.createData(span.end);
-
-    // 2. Merge span into all FormatData in the range
-    // [startPos, endPos). While doing so, build slices for the events
-    // later.
-
-    const sliceBuilder = new SliceBuilder<FormatChangeInternal>(
-      formatChangeEquals
-    );
-
-    const start =
-      span.start.pos === null
-        ? 0
-        : this.formatList.indexOfPosition(span.start.pos);
-    // If end is an after anchor, { end.pos, "before" } is handled after the loop.
-    const end =
-      span.end.pos === null
-        ? this.formatList.length
-        : this.formatList.indexOfPosition(span.end.pos);
-    for (let i = start; i < end; i++) {
-      const pos = this.formatList.positionAt(i);
-      const data = this.formatList.get(pos)!;
-      if (data.before !== undefined) {
-        this.updateOne({ pos, before: true }, data.before, sliceBuilder, span);
-      }
-      if (data.after !== undefined) {
-        this.updateOne({ pos, before: false }, data.after, sliceBuilder, span);
-      }
-    }
-
-    if (span.end.pos !== null && !span.end.before) {
-      // span ends at an after anchor; update { end.pos, "before" } if present.
-      const beforeEnd = this.formatList.get(span.end.pos)?.before;
-      if (beforeEnd !== undefined) {
-        this.updateOne(
-          { pos: span.end.pos, before: true },
-          beforeEnd,
-          sliceBuilder,
-          span
-        );
-      }
-    }
-
-    // 3. Return FormatChanges for spans that actually changed.
-
-    const slices = sliceBuilder.finish(span.end);
-    const changes: FormatChange[] = [];
-    for (const slice of slices) {
-      if (slice.data !== null && slice.data.previousValue !== span.value) {
-        changes.push({
-          start: slice.start,
-          end: slice.end,
-          key: span.key,
-          value: span.value,
-          previousValue: slice.data.previousValue,
-          format: slice.data.format,
-        });
-      }
-    }
-    return changes;
-  }
-
-  // Deletes using compareSpans equality.
-  // Use delete + add new to "mutate" a span
-  /**
-   * @returns Format changes in order (not nec contiguous or the whole span).
-   */
-  deleteSpan(span: S): FormatChange[] {
-    const index = this.locateSpan(this.orderedSpans, span);
-    if (
-      index === this.orderedSpans.length ||
-      this.compareSpans(span, this.orderedSpans[index]) !== 0
-    ) {
-      // Not present.
-      return [];
-    }
-    this.orderedSpans.splice(index, 1);
-
-    // TODO: update maps
-  }
-
   /**
    * Returns the index where span should be inserted into list
    * (or its current index, if present). Comparisons use compareSpan
@@ -236,6 +132,91 @@ export class AbstractFormatting<S extends AbstractSpan> {
       }
       return R;
     }
+  }
+
+  // Stores the literal reference for access in spans() etc. -
+  // so you can use === comparison later.
+  // Skips redundant spans (according to compareSpans).
+  /**
+   * @returns Format changes in order (not nec contiguous or the whole span).
+   */
+  addSpan(span: S): FormatChange[] {
+    const index = this.locateSpan(this.orderedSpans, span);
+    if (
+      index < this.orderedSpans.length &&
+      this.compareSpans(span, this.orderedSpans[index]) === 0
+    ) {
+      // Already exists.
+      return [];
+    }
+    this.orderedSpans.splice(index, 0, span);
+
+    // Update this.formatList and calculate the changes, in several steps:
+
+    // 1. Create FormatData at the start and end anchors if needed,
+    // copying the previous anchor with data.
+
+    this.createData(span.start);
+    this.createData(span.end);
+
+    // 2. Merge span into all FormatData in the range
+    // [span.start, span.end). While doing so, build slices for the events
+    // later.
+
+    const sliceBuilder = new SliceBuilder<FormatChangeInternal>(
+      formatChangeEquals
+    );
+
+    const startIndex = this.formatList.indexOfPosition(span.start.pos);
+    const endIndex = this.formatList.indexOfPosition(span.end.pos);
+    for (let i = startIndex; i <= endIndex; i++) {
+      const pos = this.formatList.positionAt(i);
+      const data = this.formatList.get(pos)!;
+      // Only update the pos anchors that have data and are
+      // in the range [span.start, span.end).
+      if (data.before !== undefined) {
+        if (
+          (startIndex < i && i < endIndex) ||
+          (i === startIndex && span.start.before) ||
+          (i === endIndex && !span.end.before)
+        ) {
+          this.addToAnchor(
+            { pos, before: true },
+            data.before,
+            sliceBuilder,
+            span
+          );
+        }
+      }
+      if (data.after !== undefined) {
+        if (i < endIndex) {
+          this.addToAnchor(
+            { pos, before: false },
+            data.after,
+            sliceBuilder,
+            span
+          );
+        }
+      }
+    }
+
+    // 3. Return FormatChanges for spans that actually changed.
+
+    const slices = sliceBuilder.finish(span.end);
+    const changes: FormatChange[] = [];
+    for (const slice of slices) {
+      if (slice.data !== null && slice.data.otherValue !== span.value) {
+        changes.push({
+          start: slice.start,
+          end: slice.end,
+          key: span.key,
+          value: span.value,
+          previousValue: slice.data.otherValue,
+          format: slice.data.format,
+        });
+      }
+    }
+    return changes;
   }
 
   /**
@@ -282,7 +263,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
     return copy;
   }
 
-  private updateOne(
+  private addToAnchor(
     anchor: Anchor,
     anchorData: Map<string, S[]>,
     sliceBuilder: SliceBuilder<FormatChangeInternal>,
@@ -296,20 +277,112 @@ export class AbstractFormatting<S extends AbstractSpan> {
     const index = this.locateSpan(spans, span);
     spans.splice(index, 0, span);
     if (index === spans.length - 1) {
+      // New span wins over old. Record the change.
       sliceBuilder.add(anchor, {
-        previousValue: spans.length === 1 ? null : spans[spans.length - 2],
+        otherValue: spans.length === 1 ? null : spans[spans.length - 2],
         format: spansToRecord(anchorData),
       });
     } else sliceBuilder.add(anchor, null);
   }
 
+  // Deletes using compareSpans equality.
+  // Use delete + add new to "mutate" a span
   /**
-   * Returns whether newSpans wins over oldSpan, either in the compareSpans
-   * order or because oldSpan is undefined.
+   * @returns Format changes in order (not nec contiguous or the whole span).
    */
-  private wins(newSpan: S, oldSpan: S | undefined): boolean {
-    if (oldSpan === undefined) return true;
-    return this.compareSpans(newSpan, oldSpan) > 0;
+  deleteSpan(span: S): FormatChange[] {
+    const index = this.locateSpan(this.orderedSpans, span);
+    if (
+      index === this.orderedSpans.length ||
+      this.compareSpans(span, this.orderedSpans[index]) !== 0
+    ) {
+      // Not present.
+      return [];
+    }
+    // Our canonical copy of the span, which can be compared by-reference.
+    const canonSpan = this.orderedSpans[index];
+    this.orderedSpans.splice(index, 1);
+
+    // Update this.formatList and calculate the changes, in several steps:
+
+    // 1. Merge span into all FormatData in the range
+    // [span.start, span.end). While doing so, build slices for the events
+    // later.
+
+    const sliceBuilder = new SliceBuilder<FormatChangeInternal>(
+      formatChangeEquals
+    );
+
+    // Since the span currently exists, its start and end anchors must have data.
+    const startIndex = this.formatList.indexOfPosition(canonSpan.start.pos);
+    const endIndex = this.formatList.indexOfPosition(canonSpan.end.pos);
+    for (let i = startIndex; i <= endIndex; i++) {
+      const pos = this.formatList.positionAt(i);
+      const data = this.formatList.get(pos)!;
+      // Only update the pos anchors that have data and are
+      // in the range [span.start, span.end).
+      if (data.before !== undefined) {
+        if (
+          (startIndex < i && i < endIndex) ||
+          (i === startIndex && canonSpan.start.before) ||
+          (i === endIndex && !canonSpan.end.before)
+        ) {
+          this.deleteFromAnchor(
+            { pos, before: true },
+            data.before,
+            sliceBuilder,
+            canonSpan
+          );
+        }
+      }
+      if (data.after !== undefined) {
+        if (i < endIndex) {
+          this.deleteFromAnchor(
+            { pos, before: false },
+            data.after,
+            sliceBuilder,
+            canonSpan
+          );
+        }
+      }
+    }
+
+    // 2. Return FormatChanges for spans that actually changed.
+
+    const slices = sliceBuilder.finish(canonSpan.end);
+    const changes: FormatChange[] = [];
+    for (const slice of slices) {
+      if (slice.data !== null && slice.data.otherValue !== canonSpan.value) {
+        changes.push({
+          start: slice.start,
+          end: slice.end,
+          key: canonSpan.key,
+          value: slice.data.otherValue,
+          previousValue: canonSpan.value,
+          format: slice.data.format,
+        });
+      }
+    }
+    return changes;
+  }
+
+  private deleteFromAnchor(
+    anchor: Anchor,
+    anchorData: Map<string, S[]>,
+    sliceBuilder: SliceBuilder<FormatChangeInternal>,
+    span: S
+  ) {
+    const spans = anchorData.get(span.key)!;
+    // This won't break the asymptotics b/c splice will be equally slow.
+    const index = spans.lastIndexOf(span);
+    spans.splice(index, 1);
+    if (index === spans.length) {
+      // Deleted span used to win. Record the change.
+      sliceBuilder.add(anchor, {
+        otherValue: spans.length === 0 ? null : spans[spans.length - 1],
+        format: spansToRecord(anchorData),
+      });
+    } else sliceBuilder.add(anchor, null);
   }
 
   /**
@@ -539,7 +612,11 @@ function recordEquals(
 }
 
 type FormatChangeInternal = {
-  previousValue: any;
+  /**
+   * For adds, the previous value; for deletes, the new value.
+   * null for not-present.
+   */
+  otherValue: any;
   format: Record<string, unknown>;
 } | null;
 
@@ -548,7 +625,5 @@ function formatChangeEquals(
   b: FormatChangeInternal
 ): boolean {
   if (a === null || b === null) return a === b;
-  return (
-    a.previousValue === b.previousValue && recordEquals(a.format, b.format)
-  );
+  return a.otherValue === b.otherValue && recordEquals(a.format, b.format);
 }

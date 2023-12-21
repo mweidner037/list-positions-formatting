@@ -31,7 +31,7 @@ export function equalsAnchor(a: Anchor, b: Anchor): boolean {
 }
 
 /**
- * Missing metadata needed for comparison (incl equality check),
+ * Missing metadata needed for comparison,
  * e.g., a Lamport timestamp. Hence why "abstract" (not really).
  */
 export interface AbstractSpan {
@@ -63,10 +63,7 @@ export type FormatChange = {
 // TODO: methods to convert a Span/Range + List into indexed slice.
 // And vice versa (take indices and "expand" behavior to get Span).
 
-// TODO: mutators return changes.
-
-// Needs a compareSpans function, hence why "abstract" (not really).
-export class AbstractFormatting<S extends AbstractSpan> {
+export abstract class AbstractFormatting<S extends AbstractSpan> {
   /**
    * All spans in sort order.
    *
@@ -86,8 +83,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
    * @param compareSpans
    */
   constructor(
-    order: Order,
-    private readonly compareSpans: (a: S, b: S) => number
+    order: Order
   ) {
     // If init is changed, also update clear().
     this.orderedSpans = [];
@@ -95,6 +91,14 @@ export class AbstractFormatting<S extends AbstractSpan> {
     // Set the start anchor so you can always "go left" to find FormatData.
     this.formatList.set(Order.MIN_POSITION, { after: new Map() });
   }
+
+  protected abstract compareSpans(a: S, b: S): number;
+
+  /**
+   * 
+   * @param base Okay to modify this and return it.
+   */
+  protected abstract newSpan(base: AbstractSpan): S;
 
   /**
    * Returns the index where span should be inserted into list
@@ -258,6 +262,9 @@ export class AbstractFormatting<S extends AbstractSpan> {
     const toCopy = prevData.after ?? prevData.before!;
     const copy = new Map<string, S[]>();
     for (const [key, spans] of toCopy) {
+      // TODO: use shallow copy at first and clone-on-write?
+      // For the keys that aren't changing.
+      // (Would it make sense to have a different formatList per key?)
       copy.set(key, spans.slice());
     }
     return copy;
@@ -386,8 +393,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
   }
 
   /**
-   * Does not change the state - gives you AbstractSpans that you can fill out
-   * and pass to addSpan.
+   * Does not change the state - just gives you the spans.
    *
    * @throws If `list.positionAt(index)` is min or max Position.
    */
@@ -402,7 +408,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
       key: string,
       value: any
     ) => "after" | "before" | "none" | "both"
-  ): AbstractSpan[] {
+  ): S[] {
     function positionAt(i: number) {
       const listPos = list.positionAt(i);
       if (typeof listPos === "string") return list.order.unlex(listPos);
@@ -429,7 +435,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
       }
     }
 
-    const newSpans: AbstractSpan[] = [];
+    const newSpans: S[] = [];
     for (const [key, value] of needsFormat) {
       const expandRule =
         expandRules === undefined ? "after" : expandRules(key, value);
@@ -441,7 +447,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
         expandRule === "after" || expandRule === "both"
           ? { pos: nextPos, before: true }
           : { pos, before: false };
-      newSpans.push({ start, end, key, value });
+      newSpans.push(this.newSpan({ start, end, key, value }));
     }
     return newSpans;
   }
@@ -482,7 +488,9 @@ export class AbstractFormatting<S extends AbstractSpan> {
    * In order; starts with open minPos, ends with open maxPos.
    */
   formatted(): FormattedRange[] {
-    const sliceBuilder = new SliceBuilder<Record<string, unknown>>(recordEquals);
+    const sliceBuilder = new SliceBuilder<Record<string, unknown>>(
+      recordEquals
+    );
     // formatList always contains the starting anchor, so this will cover the
     // whole beginning.
     for (const [pos, data] of this.formatList.entries()) {
@@ -494,7 +502,10 @@ export class AbstractFormatting<S extends AbstractSpan> {
       }
     }
     // Reach the end of the list if we haven't already.
-    const slices = sliceBuilder.finish({ pos: Order.MAX_POSITION, before: true });
+    const slices = sliceBuilder.finish({
+      pos: Order.MAX_POSITION,
+      before: true,
+    });
 
     // Map the slices to the expected format.
     return slices.map((slice) => ({

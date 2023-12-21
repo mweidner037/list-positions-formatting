@@ -46,7 +46,6 @@ export type FormattedRange = {
   start: Anchor;
   end: Anchor;
   format: Record<string, any>;
-  // TODO: activeSpans: Map<string, S>? Precludes combining equi-formatted neighbors.
 };
 
 export type FormatChange = {
@@ -90,6 +89,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
     order: Order,
     private readonly compareSpans: (a: S, b: S) => number
   ) {
+    // If init is changed, also update clear().
     this.orderedSpans = [];
     this.formatList = new List(order);
     // Set the start anchor so you can always "go left" to find FormatData.
@@ -280,7 +280,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
       // New span wins over old. Record the change.
       sliceBuilder.add(anchor, {
         otherValue: spans.length === 1 ? null : spans[spans.length - 2],
-        format: spansToRecord(anchorData),
+        format: dataToRecord(anchorData),
       });
     } else sliceBuilder.add(anchor, null);
   }
@@ -380,7 +380,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
       // Deleted span used to win. Record the change.
       sliceBuilder.add(anchor, {
         otherValue: spans.length === 0 ? null : spans[spans.length - 1],
-        format: spansToRecord(anchorData),
+        format: dataToRecord(anchorData),
       });
     } else sliceBuilder.add(anchor, null);
   }
@@ -411,10 +411,7 @@ export class AbstractFormatting<S extends AbstractSpan> {
 
     const pos = positionAt(index);
     if (pos.bunchID === BunchIDs.ROOT) {
-      throw new Error(
-        "list.positionAt(index) is the min or max Position: " +
-          JSON.stringify(pos)
-      );
+      throw new Error("list.positionAt(index) is the min or max Position");
     }
     const prevPos = index === 0 ? Order.MIN_POSITION : positionAt(index - 1);
     const nextPos =
@@ -449,24 +446,63 @@ export class AbstractFormatting<S extends AbstractSpan> {
     return newSpans;
   }
 
-  clear(): void {}
+  clear(): void {
+    this.orderedSpans = [];
+    this.formatList.clear();
+    // Init like in constructor.
+    this.formatList.set(Order.MIN_POSITION, { after: new Map() });
+  }
 
   /**
    * @throws If pos is min or max Position.
    */
-  getFormat(pos: Position): Record<string, any> {}
+  getFormat(pos: Position): Record<string, any> {
+    if (pos.bunchID === BunchIDs.ROOT) {
+      throw new Error("pos is the min or max Position");
+    }
+
+    const posData = this.formatList.get(pos);
+    if (posData?.before !== undefined) return dataToRecord(posData.before);
+
+    // Since MIN_POSITION is always set, prevIndex is never -1.
+    const prevIndex = this.formatList.indexOfPosition(pos, "left");
+    const prevData = this.formatList.getAt(prevIndex)!;
+    return dataToRecord(prevData.after ?? prevData.before!);
+  }
 
   // getActiveSpans(pos: Position): Map<string, S> {}
 
   // For each key, nonempty and in precedence order.
   // getAllSpans(pos: Position): Map<string, S[]> {}
 
+  // TODO: slice args?
   /**
    * The whole list as a series of ranges with their current formats.
    *
    * In order; starts with open minPos, ends with open maxPos.
    */
-  formatted(): FormattedRange[] {}
+  formatted(): FormattedRange[] {
+    const sliceBuilder = new SliceBuilder<Record<string, unknown>>(recordEquals);
+    // formatList always contains the starting anchor, so this will cover the
+    // whole beginning.
+    for (const [pos, data] of this.formatList.entries()) {
+      if (data.before !== undefined) {
+        sliceBuilder.add({ pos, before: true }, dataToRecord(data.before));
+      }
+      if (data.after !== undefined) {
+        sliceBuilder.add({ pos, before: false }, dataToRecord(data.after));
+      }
+    }
+    // Reach the end of the list if we haven't already.
+    const slices = sliceBuilder.finish({ pos: Order.MAX_POSITION, before: true });
+
+    // Map the slices to the expected format.
+    return slices.map((slice) => ({
+      start: slice.start,
+      end: slice.end,
+      format: slice.data,
+    }));
+  }
 
   // TODO: version that takes a List (etc.) and directly gives you index-ranges?
 
@@ -492,8 +528,9 @@ export class AbstractFormatting<S extends AbstractSpan> {
   load(savedState: S[]): void {
     this.clear();
 
-    this.orderedSpans = savedState.slice();
-    // TODO: fill maps
+    // TODO: can we do this more efficiently?
+    // Skipping change computation; exploiting order.
+    for (const span of savedState) this.addSpan(span);
   }
 }
 
@@ -522,7 +559,7 @@ interface FormatData<S extends AbstractSpan> {
   after?: Map<string, S[]>;
 }
 
-function spansToRecord(
+function dataToRecord(
   anchorData: Map<string, AbstractSpan[]>
 ): Record<string, unknown> {
   const ans: Record<string, unknown> = {};

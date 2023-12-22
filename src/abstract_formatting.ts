@@ -82,9 +82,7 @@ export abstract class AbstractFormatting<S extends AbstractSpan> {
    * Usually your list's `.order`.
    * @param compareSpans
    */
-  constructor(
-    order: Order
-  ) {
+  constructor(readonly order: Order) {
     // If init is changed, also update clear().
     this.orderedSpans = [];
     this.formatList = new List(order);
@@ -95,7 +93,7 @@ export abstract class AbstractFormatting<S extends AbstractSpan> {
   protected abstract compareSpans(a: S, b: S): number;
 
   /**
-   * 
+   *
    * @param base Okay to modify this and return it.
    */
   protected abstract newSpan(base: AbstractSpan): S;
@@ -153,6 +151,19 @@ export abstract class AbstractFormatting<S extends AbstractSpan> {
       // Already exists.
       return [];
     }
+
+    const compared = this.order.compare(span.start.pos, span.end.pos);
+    if (
+      compared > 0 ||
+      (compared === 0 && !(span.start.before && !span.end.before))
+    ) {
+      throw new Error(
+        `span has start >= end: ${JSON.stringify(span.start)}, ${JSON.stringify(
+          span.end
+        )}`
+      );
+    }
+
     this.orderedSpans.splice(index, 0, span);
 
     // Update this.formatList and calculate the changes, in several steps:

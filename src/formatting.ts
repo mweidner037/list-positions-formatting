@@ -31,14 +31,15 @@ export class Formatting extends AbstractFormatting<Span> {
     this.replicaID = replicaID ?? BunchIDs.newReplicaID();
   }
 
-  protected compareSpans(a: Span, b: Span): number {
+  compareSpans(a: Span, b: Span): number {
     // Lamport timestamp order, with ties broken by creatorID.
     if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
     if (a.creatorID === b.creatorID) return 0;
     return a.creatorID > b.creatorID ? 1 : -1;
   }
 
-  protected newSpan(base: AbstractSpan): Span {
+  // Note: doesn't add the span.
+  newSpan(base: AbstractSpan): Span {
     this.lamport++;
     return {
       ...base,

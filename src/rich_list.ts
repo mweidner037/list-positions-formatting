@@ -2,10 +2,6 @@ import { BunchMeta, List, Order, Position } from "list-positions";
 import { Anchor } from "./abstract_formatting";
 import { Formatting, Span } from "./formatting";
 
-// Allow "any" as the span value type.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
 export class RichList<T> {
   readonly order: Order;
   readonly list: List<T>;
@@ -16,7 +12,6 @@ export class RichList<T> {
     value: any
   ) => "after" | "before" | "none" | "both";
 
-  // TODO: use x2
   onCreateSpan: ((createdSpan: Span) => void) | undefined = undefined;
 
   constructor(options?: {
@@ -58,11 +53,16 @@ export class RichList<T> {
       format,
       this.expandRules
     );
+    for (const createdSpan of createdSpans) {
+      this.formatting.addSpan(createdSpan);
+    }
     if (this.onCreateSpan) {
       for (const createdSpan of createdSpans) this.onCreateSpan(createdSpan);
     }
     return [startPos, createdBunch, createdSpans];
   }
+
+  // TODO: matchFormat wrapper for later set/setAt? One that actually adds the spans.
 
   format(
     startIndex: number,
@@ -98,6 +98,7 @@ export class RichList<T> {
 
     const span = this.formatting.newSpan({ start, end, key, value });
     this.formatting.addSpan(span);
+    if (this.onCreateSpan) this.onCreateSpan(span);
     return span;
   }
 

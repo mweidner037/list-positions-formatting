@@ -46,5 +46,8 @@ module.exports = {
         argsIgnorePattern: "^_",
       },
     ],
+    // For this project, formats have type Record<string, any>.
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unsafe-assignment": "off",
   },
 };

@@ -7,10 +7,6 @@ import {
   Position,
 } from "list-positions";
 
-// Allow "any" as the span value type.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
 // TODO: treat all falsy values like null? So you can use e.g. bold: false,
 // and so undefined doesn't cause confusion. See what Yjs, Quill, Automerge do.
 

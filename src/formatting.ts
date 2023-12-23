@@ -6,10 +6,6 @@ import {
   FormatChange,
 } from "./abstract_formatting";
 
-// Allow "any" as the span value type.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
 export type Span = {
   start: Anchor;
   end: Anchor;
@@ -65,4 +61,6 @@ export class Formatting extends AbstractFormatting<Span> {
     }
     super.load(savedState);
   }
+
+  // TODO: change matchFormatting to actually add the spans?
 }

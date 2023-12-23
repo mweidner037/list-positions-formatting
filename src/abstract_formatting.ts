@@ -407,6 +407,7 @@ export abstract class AbstractFormatting<S extends AbstractSpan> {
   matchFormat(
     // Need list so that expand rules can go up to but exclude index +/- 1
     list: List<any> | LexList<any> | Outline,
+    // TODO: sole index won't work for bulk insertions where you want them all formatted.
     index: number,
     // nulls are ignored.
     format: Record<string, any>,
@@ -489,6 +490,8 @@ export abstract class AbstractFormatting<S extends AbstractSpan> {
   // getAllSpans(pos: Position): Map<string, S[]> {}
 
   // TODO: slice args?
+  // TODO: analog that takes a list and gives indices, combining matching neighbors
+  // and skipping deleted parts? Like Quill delta.
   /**
    * The whole list as a series of ranges with their current formats.
    *

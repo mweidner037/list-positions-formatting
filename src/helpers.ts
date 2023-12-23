@@ -1,7 +1,7 @@
 import { LexList, List, Order, Outline } from "list-positions";
 import { Anchor } from "./abstract_formatting";
 
-export function anchorsFromIndexes(
+export function anchorsFromSlice(
   list: List<unknown> | LexList<unknown> | Outline,
   startIndex: number,
   endIndex: number,
@@ -11,33 +11,53 @@ export function anchorsFromIndexes(
     throw new Error(`startIndex <= endIndex: ${startIndex}, ${endIndex}`);
   }
 
-  function positionAt(i: number) {
-    const listPos = list.positionAt(i);
-    if (typeof listPos === "string") return list.order.unlex(listPos);
-    else return listPos;
-  }
+  const posList = list instanceof LexList ? list.list : list;
 
   let start: Anchor;
   if (expand === "before" || expand === "both") {
     const pos =
-      startIndex === 0 ? Order.MIN_POSITION : positionAt(startIndex - 1);
+      startIndex === 0
+        ? Order.MIN_POSITION
+        : posList.positionAt(startIndex - 1);
     start = { pos, before: false };
   } else {
-    start = { pos: positionAt(startIndex), before: true };
+    start = { pos: posList.positionAt(startIndex), before: true };
   }
 
   let end: Anchor;
   if (expand === "after" || expand === "both") {
     const pos =
-      endIndex === list.length ? Order.MAX_POSITION : positionAt(endIndex);
+      endIndex === list.length
+        ? Order.MAX_POSITION
+        : posList.positionAt(endIndex);
     end = { pos, before: true };
   } else {
-    end = { pos: positionAt(endIndex - 1), before: false };
+    end = { pos: posList.positionAt(endIndex - 1), before: false };
   }
 
   return { start, end };
 }
 
+export function sliceFromAnchors(
+  list: List<unknown> | LexList<unknown> | Outline,
+  start: Anchor,
+  end: Anchor
+): { startIndex: number; endIndex: number } {
+  const posList = list instanceof LexList ? list.list : list;
+  const startIndex = start.before
+    ? posList.indexOfPosition(start.pos, "right")
+    : posList.indexOfPosition(start.pos, "left") + 1;
+  const endIndex = end.before
+    ? posList.indexOfPosition(end.pos, "right")
+    : posList.indexOfPosition(start.pos, "left") + 1;
+  return { startIndex, endIndex };
+}
+
+/**
+ * Returns changes (including null for deletions) to turn current into target.
+ * 
+ * Assumes current and target don't use null values.
+ */
 export function formatDiff(
   current: Record<string, any>,
   target: Record<string, any>

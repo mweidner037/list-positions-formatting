@@ -1,7 +1,7 @@
 import { LexList, List, Order, Outline } from "list-positions";
 import { Anchor } from "./formatting";
 
-export function anchorsFromSlice(
+export function spanFromSlice(
   list: List<unknown> | LexList<unknown> | Outline,
   startIndex: number,
   endIndex: number,
@@ -38,7 +38,7 @@ export function anchorsFromSlice(
   return { start, end };
 }
 
-export function sliceFromAnchors(
+export function sliceFromSpan(
   list: List<unknown> | LexList<unknown> | Outline,
   start: Anchor,
   end: Anchor

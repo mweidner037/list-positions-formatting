@@ -5,7 +5,7 @@ import { BunchIDs, List, Order, Position } from "list-positions";
 
 export type Anchor = {
   /**
-   * Could be min or max position, but spans can't include them.
+   * Could be min or max position, but marks can't include them.
    * So be careful allowing min/max Positions in your list.
    */
   pos: Position;
@@ -23,7 +23,7 @@ export function equalsAnchor(a: Anchor, b: Anchor): boolean {
  * Missing metadata needed for comparison,
  * e.g., a Lamport timestamp. Hence why "abstract" (not really).
  */
-export interface AbstractSpan {
+export interface AbstractMark {
   start: Anchor;
   end: Anchor;
   key: string;
@@ -31,7 +31,7 @@ export interface AbstractSpan {
   value: any;
 }
 
-export type FormattedRange = {
+export type FormattedSpan = {
   start: Anchor;
   end: Anchor;
   format: Record<string, any>;
@@ -49,15 +49,15 @@ export type FormatChange = {
   format: Record<string, any>;
 };
 
-export class Formatting<S extends AbstractSpan> {
+export class Formatting<S extends AbstractMark> {
   /**
-   * All spans in sort order.
+   * All marks in sort order.
    *
    * Readonly except for this.load.
    */
-  private orderedSpans: S[];
+  private orderedMarks: S[];
   /**
-   * A view of orderedSpans that is designed for easy querying.
+   * A view of orderedMarks that is designed for easy querying.
    * This is mostly as described in the Peritext paper.
    */
   private readonly formatList: List<FormatData<S>>;
@@ -66,121 +66,121 @@ export class Formatting<S extends AbstractSpan> {
    *
    * @param order The source of Positions that you will use as args.
    * Usually your list's `.order`.
-   * @param compareSpans
+   * @param compareMarks
    */
   constructor(
     readonly order: Order,
-    readonly compareSpans: (a: S, b: S) => number
+    readonly compareMarks: (a: S, b: S) => number
   ) {
     // If init is changed, also update clear().
-    this.orderedSpans = [];
+    this.orderedMarks = [];
     this.formatList = new List(order);
     // Set the start anchor so you can always "go left" to find FormatData.
     this.formatList.set(Order.MIN_POSITION, { after: new Map() });
   }
 
   /**
-   * Returns the index where span should be inserted into list
-   * (or its current index, if present). Comparisons use compareSpan
+   * Returns the index where mark should be inserted into list
+   * (or its current index, if present). Comparisons use compareMark
    * and assume list is sorted in ascending order with no duplicates.
    */
-  private locateSpan(list: S[], span: S): number {
+  private locateMark(list: S[], mark: S): number {
     if (list.length === 0) return 0;
 
-    // Common case: greater than all spans.
-    if (this.compareSpans(span, list.at(-1)!) > 0) {
+    // Common case: greater than all marks.
+    if (this.compareMarks(mark, list.at(-1)!) > 0) {
       return list.length;
     }
 
     // Find index.
     const minus10 = Math.max(0, list.length - 10);
-    if (this.compareSpans(span, list[minus10]) >= 0) {
-      // Common case: span is "recent" - among the last 10 spans.
+    if (this.compareMarks(mark, list[minus10]) >= 0) {
+      // Common case: mark is "recent" - among the last 10 marks.
       // Search those linearly in reverse.
       for (let i = list.length - 1; i >= minus10; i--) {
-        if (this.compareSpans(span, list[1]) > 0) return i + 1;
+        if (this.compareMarks(mark, list[1]) > 0) return i + 1;
       }
-      // If we get here, the span is == minus10. TODO: check.
+      // If we get here, the mark is == minus10. TODO: check.
       return minus10;
     } else {
-      // Binary search the spans at index < minus10. Using
+      // Binary search the marks at index < minus10. Using
       // https://en.wikipedia.org/wiki/Binary_search_algorithm#Procedure_for_finding_the_leftmost_element
-      // which computes the "rank" of span - what we want.
+      // which computes the "rank" of mark - what we want.
       let L = 0;
       let R = minus10;
       while (L < R) {
         const m = Math.floor((L + R) / 2);
-        if (this.compareSpans(span, list[m]) > 0) L = m + 1;
+        if (this.compareMarks(mark, list[m]) > 0) L = m + 1;
         else R = m;
       }
       return R;
     }
   }
 
-  // Stores the literal reference for access in spans() etc. -
+  // Stores the literal reference for access in marks() etc. -
   // so you can use === comparison later.
-  // Skips redundant spans (according to compareSpans).
+  // Skips redundant marks (according to compareMarks).
   /**
-   * @returns Format changes in order (not nec contiguous or the whole span).
+   * @returns Format changes in order (not nec contiguous or the whole mark).
    */
-  addSpan(span: S): FormatChange[] {
-    const index = this.locateSpan(this.orderedSpans, span);
+  addMark(mark: S): FormatChange[] {
+    const index = this.locateMark(this.orderedMarks, mark);
     if (
-      index < this.orderedSpans.length &&
-      this.compareSpans(span, this.orderedSpans[index]) === 0
+      index < this.orderedMarks.length &&
+      this.compareMarks(mark, this.orderedMarks[index]) === 0
     ) {
       // Already exists.
       return [];
     }
 
-    const compared = this.order.compare(span.start.pos, span.end.pos);
+    const compared = this.order.compare(mark.start.pos, mark.end.pos);
     if (
       compared > 0 ||
-      (compared === 0 && !(span.start.before && !span.end.before))
+      (compared === 0 && !(mark.start.before && !mark.end.before))
     ) {
       throw new Error(
-        `span has start >= end: ${JSON.stringify(span.start)}, ${JSON.stringify(
-          span.end
+        `mark has start >= end: ${JSON.stringify(mark.start)}, ${JSON.stringify(
+          mark.end
         )}`
       );
     }
 
-    this.orderedSpans.splice(index, 0, span);
+    this.orderedMarks.splice(index, 0, mark);
 
     // Update this.formatList and calculate the changes, in several steps:
 
     // 1. Create FormatData at the start and end anchors if needed,
     // copying the previous anchor with data.
 
-    this.createData(span.start);
-    this.createData(span.end);
+    this.createData(mark.start);
+    this.createData(mark.end);
 
-    // 2. Merge span into all FormatData in the range
-    // [span.start, span.end). While doing so, build slices for the events
+    // 2. Merge mark into all FormatData in the range
+    // [mark.start, mark.end). While doing so, build slices for the events
     // later.
 
-    const sliceBuilder = new SliceBuilder<FormatChangeInternal>(
+    const sliceBuilder = new SpanBuilder<FormatChangeInternal>(
       formatChangeEquals
     );
 
-    const startIndex = this.formatList.indexOfPosition(span.start.pos);
-    const endIndex = this.formatList.indexOfPosition(span.end.pos);
+    const startIndex = this.formatList.indexOfPosition(mark.start.pos);
+    const endIndex = this.formatList.indexOfPosition(mark.end.pos);
     for (let i = startIndex; i <= endIndex; i++) {
       const pos = this.formatList.positionAt(i);
       const data = this.formatList.get(pos)!;
       // Only update the pos anchors that have data and are
-      // in the range [span.start, span.end).
+      // in the range [mark.start, mark.end).
       if (data.before !== undefined) {
         if (
           (startIndex < i && i < endIndex) ||
-          (i === startIndex && span.start.before) ||
-          (i === endIndex && !span.end.before)
+          (i === startIndex && mark.start.before) ||
+          (i === endIndex && !mark.end.before)
         ) {
           this.addToAnchor(
             { pos, before: true },
             data.before,
             sliceBuilder,
-            span
+            mark
           );
         }
       }
@@ -190,23 +190,23 @@ export class Formatting<S extends AbstractSpan> {
             { pos, before: false },
             data.after,
             sliceBuilder,
-            span
+            mark
           );
         }
       }
     }
 
-    // 3. Return FormatChanges for spans that actually changed.
+    // 3. Return FormatChanges for marks that actually changed.
 
-    const slices = sliceBuilder.finish(span.end);
+    const slices = sliceBuilder.finish(mark.end);
     const changes: FormatChange[] = [];
     for (const slice of slices) {
-      if (slice.data !== null && slice.data.otherValue !== span.value) {
+      if (slice.data !== null && slice.data.otherValue !== mark.value) {
         changes.push({
           start: slice.start,
           end: slice.end,
-          key: span.key,
-          value: span.value,
+          key: mark.key,
+          value: mark.value,
           previousValue: slice.data.otherValue,
           format: slice.data.format,
         });
@@ -253,11 +253,11 @@ export class Formatting<S extends AbstractSpan> {
     const prevData = this.formatList.getAt(posIndex - 1);
     const toCopy = prevData.after ?? prevData.before!;
     const copy = new Map<string, S[]>();
-    for (const [key, spans] of toCopy) {
+    for (const [key, marks] of toCopy) {
       // TODO: use shallow copy at first and clone-on-write?
       // For the keys that aren't changing.
       // (Would it make sense to have a different formatList per key?)
-      copy.set(key, spans.slice());
+      copy.set(key, marks.slice());
     }
     return copy;
   }
@@ -265,72 +265,72 @@ export class Formatting<S extends AbstractSpan> {
   private addToAnchor(
     anchor: Anchor,
     anchorData: Map<string, S[]>,
-    sliceBuilder: SliceBuilder<FormatChangeInternal>,
-    span: S
+    sliceBuilder: SpanBuilder<FormatChangeInternal>,
+    mark: S
   ) {
-    let spans = anchorData.get(span.key);
-    if (spans === undefined) {
-      spans = [];
-      anchorData.set(span.key, spans);
+    let marks = anchorData.get(mark.key);
+    if (marks === undefined) {
+      marks = [];
+      anchorData.set(mark.key, marks);
     }
-    const index = this.locateSpan(spans, span);
-    spans.splice(index, 0, span);
-    if (index === spans.length - 1) {
-      // New span wins over old. Record the change.
+    const index = this.locateMark(marks, mark);
+    marks.splice(index, 0, mark);
+    if (index === marks.length - 1) {
+      // New mark wins over old. Record the change.
       sliceBuilder.add(anchor, {
-        otherValue: spans.length === 1 ? null : spans[spans.length - 2],
+        otherValue: marks.length === 1 ? null : marks[marks.length - 2],
         format: dataToRecord(anchorData),
       });
     } else sliceBuilder.add(anchor, null);
   }
 
-  // Deletes using compareSpans equality.
-  // Use delete + add new to "mutate" a span
+  // Deletes using compareMarks equality.
+  // Use delete + add new to "mutate" a mark
   /**
-   * @returns Format changes in order (not nec contiguous or the whole span).
+   * @returns Format changes in order (not nec contiguous or the whole mark).
    */
-  deleteSpan(span: S): FormatChange[] {
-    const index = this.locateSpan(this.orderedSpans, span);
+  deleteMark(mark: S): FormatChange[] {
+    const index = this.locateMark(this.orderedMarks, mark);
     if (
-      index === this.orderedSpans.length ||
-      this.compareSpans(span, this.orderedSpans[index]) !== 0
+      index === this.orderedMarks.length ||
+      this.compareMarks(mark, this.orderedMarks[index]) !== 0
     ) {
       // Not present.
       return [];
     }
-    // Our canonical copy of the span, which can be compared by-reference.
-    const canonSpan = this.orderedSpans[index];
-    this.orderedSpans.splice(index, 1);
+    // Our canonical copy of the mark, which can be compared by-reference.
+    const canonMark = this.orderedMarks[index];
+    this.orderedMarks.splice(index, 1);
 
     // Update this.formatList and calculate the changes, in several steps:
 
-    // 1. Merge span into all FormatData in the range
-    // [span.start, span.end). While doing so, build slices for the events
+    // 1. Merge mark into all FormatData in the range
+    // [mark.start, mark.end). While doing so, build slices for the events
     // later.
 
-    const sliceBuilder = new SliceBuilder<FormatChangeInternal>(
+    const sliceBuilder = new SpanBuilder<FormatChangeInternal>(
       formatChangeEquals
     );
 
-    // Since the span currently exists, its start and end anchors must have data.
-    const startIndex = this.formatList.indexOfPosition(canonSpan.start.pos);
-    const endIndex = this.formatList.indexOfPosition(canonSpan.end.pos);
+    // Since the mark currently exists, its start and end anchors must have data.
+    const startIndex = this.formatList.indexOfPosition(canonMark.start.pos);
+    const endIndex = this.formatList.indexOfPosition(canonMark.end.pos);
     for (let i = startIndex; i <= endIndex; i++) {
       const pos = this.formatList.positionAt(i);
       const data = this.formatList.get(pos)!;
       // Only update the pos anchors that have data and are
-      // in the range [span.start, span.end).
+      // in the range [mark.start, mark.end).
       if (data.before !== undefined) {
         if (
           (startIndex < i && i < endIndex) ||
-          (i === startIndex && canonSpan.start.before) ||
-          (i === endIndex && !canonSpan.end.before)
+          (i === startIndex && canonMark.start.before) ||
+          (i === endIndex && !canonMark.end.before)
         ) {
           this.deleteFromAnchor(
             { pos, before: true },
             data.before,
             sliceBuilder,
-            canonSpan
+            canonMark
           );
         }
       }
@@ -340,24 +340,24 @@ export class Formatting<S extends AbstractSpan> {
             { pos, before: false },
             data.after,
             sliceBuilder,
-            canonSpan
+            canonMark
           );
         }
       }
     }
 
-    // 2. Return FormatChanges for spans that actually changed.
+    // 2. Return FormatChanges for marks that actually changed.
 
-    const slices = sliceBuilder.finish(canonSpan.end);
+    const slices = sliceBuilder.finish(canonMark.end);
     const changes: FormatChange[] = [];
     for (const slice of slices) {
-      if (slice.data !== null && slice.data.otherValue !== canonSpan.value) {
+      if (slice.data !== null && slice.data.otherValue !== canonMark.value) {
         changes.push({
           start: slice.start,
           end: slice.end,
-          key: canonSpan.key,
+          key: canonMark.key,
           value: slice.data.otherValue,
-          previousValue: canonSpan.value,
+          previousValue: canonMark.value,
           format: slice.data.format,
         });
       }
@@ -368,24 +368,24 @@ export class Formatting<S extends AbstractSpan> {
   private deleteFromAnchor(
     anchor: Anchor,
     anchorData: Map<string, S[]>,
-    sliceBuilder: SliceBuilder<FormatChangeInternal>,
-    span: S
+    sliceBuilder: SpanBuilder<FormatChangeInternal>,
+    mark: S
   ) {
-    const spans = anchorData.get(span.key)!;
+    const marks = anchorData.get(mark.key)!;
     // This won't break the asymptotics b/c splice will be equally slow.
-    const index = spans.lastIndexOf(span);
-    spans.splice(index, 1);
-    if (index === spans.length) {
-      // Deleted span used to win. Record the change.
+    const index = marks.lastIndexOf(mark);
+    marks.splice(index, 1);
+    if (index === marks.length) {
+      // Deleted mark used to win. Record the change.
       sliceBuilder.add(anchor, {
-        otherValue: spans.length === 0 ? null : spans[spans.length - 1],
+        otherValue: marks.length === 0 ? null : marks[marks.length - 1],
         format: dataToRecord(anchorData),
       });
     } else sliceBuilder.add(anchor, null);
   }
 
   clear(): void {
-    this.orderedSpans = [];
+    this.orderedMarks = [];
     this.formatList.clear();
     // Init like in constructor.
     this.formatList.set(Order.MIN_POSITION, { after: new Map() });
@@ -408,21 +408,21 @@ export class Formatting<S extends AbstractSpan> {
     return dataToRecord(prevData.after ?? prevData.before!);
   }
 
-  // getActiveSpans(pos: Position): Map<string, S> {}
+  // getActiveMarks(pos: Position): Map<string, S> {}
 
   // For each key, nonempty and in precedence order.
-  // getAllSpans(pos: Position): Map<string, S[]> {}
+  // getAllMarks(pos: Position): Map<string, S[]> {}
 
   // TODO: slice args?
   // TODO: analog that takes a list and gives indices, combining matching neighbors
   // and skipping deleted parts? Like Quill delta.
   /**
-   * The whole list as a series of ranges with their current formats.
+   * The whole list as a series of spans with their current formats.
    *
    * In order; starts with open minPos, ends with open maxPos.
    */
-  formatted(): FormattedRange[] {
-    const sliceBuilder = new SliceBuilder<Record<string, unknown>>(
+  formattedSpans(): FormattedSpan[] {
+    const sliceBuilder = new SpanBuilder<Record<string, unknown>>(
       recordEquals
     );
     // formatList always contains the starting anchor, so this will cover the
@@ -449,33 +449,33 @@ export class Formatting<S extends AbstractSpan> {
     }));
   }
 
-  // TODO: version that takes a List (etc.) and directly gives you index-ranges?
+  // TODO: formattedSlices that takes a list and can opt over spans past the end?
 
   /**
-   * All spans, regardless of whether they are currently winning.
+   * All marks, regardless of whether they are currently winning.
    *
-   * In compareSpans order.
+   * In compareMarks order.
    *
    * TODO: explicit saving and loading that uses more internal format
-   * for faster loading? E.g. sorting by compareSpans. (Warn not to change order.)
+   * for faster loading? E.g. sorting by compareMarks. (Warn not to change order.)
    */
-  spans(): IterableIterator<S> {
-    return this.orderedSpans[Symbol.iterator]();
+  marks(): IterableIterator<S> {
+    return this.orderedMarks[Symbol.iterator]();
   }
 
-  // Save format: all spans in compareSpans order (same as spans()).
+  // Save format: all marks in compareMarks order (same as marks()).
   save(): S[] {
-    return this.orderedSpans.slice();
+    return this.orderedMarks.slice();
   }
 
-  // Overwrites existing state. (To merge, call addSpans in a loop.)
+  // Overwrites existing state. (To merge, call addMarks in a loop.)
   // To see result, call formatted.
   load(savedState: S[]): void {
     this.clear();
 
     // TODO: can we do this more efficiently?
     // Skipping change computation; exploiting order.
-    for (const span of savedState) this.addSpan(span);
+    for (const mark of savedState) this.addMark(mark);
   }
 }
 
@@ -485,19 +485,19 @@ export class Formatting<S extends AbstractSpan> {
  * Note: after deletions, both fields may be empty, but they will never
  * both be undefined.
  */
-interface FormatData<S extends AbstractSpan> {
+interface FormatData<S extends AbstractMark> {
   /**
-   * Spans starting at or strictly containing anchor { pos, before: true }.
+   * Marks starting at or strictly containing anchor { pos, before: true }.
    *
-   * Specifically, maps from format key to the winning span for that key.
+   * Specifically, maps from format key to the winning mark for that key.
    *
    * May be undefined instead of empty.
    */
   before?: Map<string, S[]>;
   /**
-   * Spans starting at or strictly containing anchor { pos, before: false }.
+   * Marks starting at or strictly containing anchor { pos, before: false }.
    *
-   * Specifically, maps from format key to the winning span for that key.
+   * Specifically, maps from format key to the winning mark for that key.
    *
    * May be undefined instead of empty.
    */
@@ -505,20 +505,20 @@ interface FormatData<S extends AbstractSpan> {
 }
 
 function dataToRecord(
-  anchorData: Map<string, AbstractSpan[]>
+  anchorData: Map<string, AbstractMark[]>
 ): Record<string, unknown> {
   const ans: Record<string, unknown> = {};
-  for (const [key, spans] of anchorData) {
-    const span = spans[spans.length - 1];
-    if (span.value !== null) ans[key] = span.value;
+  for (const [key, marks] of anchorData) {
+    const mark = marks[marks.length - 1];
+    if (mark.value !== null) ans[key] = mark.value;
   }
   return ans;
 }
 
 /**
- * A slice of CRichText.text with attached data, used by SliceBuilder.
+ * A span with attached data, used by SliceBuilder.
  */
-interface Slice<D> {
+interface SpanData<D> {
   /** Inclusive. */
   start: Anchor;
   /** Exclusive. */
@@ -527,20 +527,20 @@ interface Slice<D> {
 }
 
 /**
- * Utility class for outputting ranges in Format events and formatted().
- * This class takes care of omitting empty ranges and merging neighboring ranges
+ * Utility class for outputting spans in Format events and formatted().
+ * This class takes care of omitting empty spans and merging neighboring spans
  * with the same data (according to the constructor's `equals` arg).
  */
-class SliceBuilder<D> {
-  private readonly slices: Slice<D>[] = [];
+class SpanBuilder<D> {
+  private readonly slices: SpanData<D>[] = [];
   private prevAnchor: Anchor | null = null;
   private prevData!: D;
 
   constructor(readonly equals: (a: D, b: D) => boolean) {}
 
   /**
-   * Add a new range with the given data and interval start, ending the
-   * previous interval.
+   * Add a new span with the given data and interval start, ending the
+   * previous span.
    *
    * anchor must not be the end anchor.
    */
@@ -554,10 +554,10 @@ class SliceBuilder<D> {
   }
 
   /**
-   * Ends the most recent interval at nextAnchor and returns the
-   * finished slices.
+   * Ends the most recent spans at nextAnchor and returns the
+   * finished spans.
    */
-  finish(nextAnchor: Anchor): Slice<D>[] {
+  finish(nextAnchor: Anchor): SpanData<D>[] {
     if (this.prevAnchor !== null) {
       this.record(this.prevAnchor, nextAnchor, this.prevData);
     }

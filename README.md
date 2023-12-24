@@ -4,7 +4,7 @@ Inline formatting for a list, e.g., collaborative rich-text
 
 ## About
 
-Peritext-style formatting spans that you can apply to any list.
+Peritext-style formatting marks that you can apply to any list.
 
 CRDT-inspired, but not actually a CRDT.
 

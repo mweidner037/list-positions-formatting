@@ -1,8 +1,8 @@
 import { BunchIDs, BunchMeta, List, Order, Position } from "list-positions";
 import { Anchor, Formatting } from "./formatting";
-import { anchorsFromSlice, diffFormats } from "./helpers";
+import { diffFormats, spanFromSlice } from "./helpers";
 
-export type Span = {
+export type Mark = {
   start: Anchor;
   end: Anchor;
   key: string;
@@ -16,7 +16,7 @@ export type Span = {
 export class RichList<T> {
   readonly order: Order;
   readonly list: List<T>;
-  readonly formatting: Formatting<Span>;
+  readonly formatting: Formatting<Mark>;
 
   readonly replicaID: string;
   private timestamp = 0;
@@ -26,7 +26,7 @@ export class RichList<T> {
     value: any
   ) => "after" | "before" | "none" | "both";
 
-  onCreateSpan: ((createdSpan: Span) => void) | undefined = undefined;
+  onCreateMark: ((createdMark: Mark) => void) | undefined = undefined;
 
   constructor(options?: {
     // TODO: also accept list as arg?
@@ -39,12 +39,15 @@ export class RichList<T> {
   }) {
     this.order = options?.order ?? new Order();
     this.list = new List(this.order);
-    this.formatting = new Formatting(this.order, RichList.compareSpans);
+    // TODO: need to capture its created marks so we can update Lamport timestamp.
+    // But w/o breaking users own onCreateMark.
+    // Maybe subclass/wrapper is the best approach here?
+    this.formatting = new Formatting(this.order, RichList.compareMarks);
     this.replicaID = options?.replicaID ?? BunchIDs.newReplicaID();
     this.expandRules = options?.expandRules;
   }
 
-  static compareSpans = (a: Span, b: Span): number => {
+  static compareMarks = (a: Mark, b: Mark): number => {
     if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
     if (a.creatorID === b.creatorID) return 0;
     return a.creatorID > b.creatorID ? 1 : -1;
@@ -54,12 +57,12 @@ export class RichList<T> {
     index: number,
     format: Record<string, any>,
     value: T
-  ): [pos: Position, createdBunch: BunchMeta | null, createdSpans: Span[]];
+  ): [pos: Position, createdBunch: BunchMeta | null, createdMarks: Mark[]];
   insertAt(
     index: number,
     format: Record<string, any>,
     ...values: T[]
-  ): [startPos: Position, createdBunch: BunchMeta | null, createdSpans: Span[]];
+  ): [startPos: Position, createdBunch: BunchMeta | null, createdMarks: Mark[]];
   insertAt(
     index: number,
     format: Record<string, any>,
@@ -67,7 +70,7 @@ export class RichList<T> {
   ): [
     startPos: Position,
     createdBunch: BunchMeta | null,
-    createdSpans: Span[]
+    createdMarks: Mark[]
   ] {
     const [startPos, createdBunch] = this.list.insertAt(index, ...values);
     // Inserted positions all get the same initial format because they are not
@@ -76,17 +79,17 @@ export class RichList<T> {
       this.formatting.getFormat(startPos),
       format
     );
-    const createdSpans: Span[] = [];
+    const createdMarks: Mark[] = [];
     for (const [key, value] of needsFormat) {
       const expand =
         this.expandRules === undefined ? "after" : this.expandRules(key, value);
-      const { start, end } = anchorsFromSlice(
+      const { start, end } = spanFromSlice(
         this.list,
         index,
         index + values.length,
         expand
       );
-      const span: Span = {
+      const mark: Mark = {
         start,
         end,
         key,
@@ -94,15 +97,15 @@ export class RichList<T> {
         timestamp: ++this.timestamp,
         creatorID: this.replicaID,
       };
-      this.formatting.addSpan(span);
-      this.onCreateSpan?.(span);
-      createdSpans.push(span);
+      this.formatting.addMark(mark);
+      this.onCreateMark?.(mark);
+      createdMarks.push(mark);
     }
 
-    return [startPos, createdBunch, createdSpans];
+    return [startPos, createdBunch, createdMarks];
   }
 
-  // TODO: matchFormat wrapper for later set/setAt? One that actually adds the spans.
+  // TODO: matchFormat wrapper for later set/setAt? One that actually adds the marks.
 
   format(
     startIndex: number,
@@ -110,7 +113,7 @@ export class RichList<T> {
     key: string,
     value: any,
     expand: "after" | "before" | "none" | "both" = "after"
-  ): Span {
+  ): Mark {
     if (startIndex <= endIndex) {
       throw new Error(`startIndex <= endIndex: ${startIndex}, ${endIndex}`);
     }
@@ -136,7 +139,7 @@ export class RichList<T> {
       end = { pos: this.list.positionAt(endIndex - 1), before: false };
     }
 
-    const span: Span = {
+    const mark: Mark = {
       start,
       end,
       key,
@@ -144,10 +147,12 @@ export class RichList<T> {
       timestamp: ++this.timestamp,
       creatorID: this.replicaID,
     };
-    this.formatting.addSpan(span);
-    this.onCreateSpan?.(span);
-    return span;
+    this.formatting.addMark(mark);
+    this.onCreateMark?.(mark);
+    return mark;
   }
 
   // Other ops only involve one of (list, formatting); do it directly on them?
+
+  // TODO: save/load
 }

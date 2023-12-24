@@ -27,7 +27,7 @@ export interface AbstractMark {
   start: Anchor;
   end: Anchor;
   key: string;
-  /** Anything except null - that's reserved to mean "delete this format". */
+  /** Anything except null - that's reserved to mean "delete this format". TODO: enforce */
   value: any;
 }
 

@@ -1,6 +1,6 @@
 import { BunchIDs, BunchMeta, List, Order, Position } from "list-positions";
 import { Anchor, Formatting } from "./formatting";
-import { diffFormats, spanFromSlice } from "./helpers";
+import { diffFormats, sliceFromSpan, spanFromSlice } from "./helpers";
 
 export type Mark = {
   start: Anchor;
@@ -11,6 +11,12 @@ export type Mark = {
   creatorID: string;
   /** Lamport timestamp. Ties broken by creatorID. Always positive. */
   timestamp: number;
+};
+
+export type FormattedSlice = {
+  startIndex: number;
+  endIndex: number;
+  format: Record<string, any>;
 };
 
 export class RichList<T> {
@@ -150,6 +156,16 @@ export class RichList<T> {
     this.formatting.addMark(mark);
     this.onCreateMark?.(mark);
     return mark;
+  }
+
+  formattedSlices(): FormattedSlice[] {
+    // TODO: combine identical neighbors; opts
+    return this.formatting
+      .formattedSpans()
+      .map((span) => ({
+        ...sliceFromSpan(this.list, span.start, span.end),
+        format: span.format,
+      }));
   }
 
   // Other ops only involve one of (list, formatting); do it directly on them?

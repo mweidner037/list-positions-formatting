@@ -1,5 +1,13 @@
-import { BunchIDs, BunchMeta, List, Order, Position } from "list-positions";
-import { Anchor, Formatting } from "./formatting";
+import {
+  BunchIDs,
+  BunchMeta,
+  List,
+  ListSavedState,
+  Order,
+  OrderSavedState,
+  Position,
+} from "list-positions";
+import { Anchor, FormatChange, FormattedSpan, Formatting } from "./formatting";
 import { diffFormats, sliceFromSpan, spanFromSlice } from "./helpers";
 
 export type Mark = {
@@ -19,10 +27,16 @@ export type FormattedSlice = {
   format: Record<string, any>;
 };
 
+export type RichListSavedState<T> = {
+  order: OrderSavedState;
+  list: ListSavedState<T>;
+  formatting: Mark[];
+};
+
 export class RichList<T> {
   readonly order: Order;
   readonly list: List<T>;
-  readonly formatting: Formatting<Mark>;
+  private readonly formatting: Formatting<Mark>;
 
   readonly replicaID: string;
   private timestamp = 0;
@@ -36,15 +50,23 @@ export class RichList<T> {
 
   constructor(options?: {
     // TODO: also accept list as arg?
-    order?: Order; // If not provided, all are "after".
+    order?: Order;
+    // Takes precedence over order.
+    list?: List<T>;
     replicaID?: string;
+    // If not provided, all are "after".
     expandRules?: (
       key: string,
       value: any
     ) => "after" | "before" | "none" | "both";
   }) {
-    this.order = options?.order ?? new Order();
-    this.list = new List(this.order);
+    if (options?.list !== undefined) {
+      this.list = options.list;
+      this.order = this.list.order;
+    } else {
+      this.order = options?.order ?? new Order();
+      this.list = new List(this.order);
+    }
     // TODO: need to capture its created marks so we can update Lamport timestamp.
     // But w/o breaking users own onCreateMark.
     // Maybe subclass/wrapper is the best approach here?
@@ -59,17 +81,19 @@ export class RichList<T> {
     return a.creatorID > b.creatorID ? 1 : -1;
   };
 
-  insertAt(
+  // TODO: return changes? So you know which key-value pairs changed,
+  // and to let you reuse event methods.
+  insertWithFormat(
     index: number,
     format: Record<string, any>,
     value: T
   ): [pos: Position, createdBunch: BunchMeta | null, createdMarks: Mark[]];
-  insertAt(
+  insertWithFormat(
     index: number,
     format: Record<string, any>,
     ...values: T[]
   ): [startPos: Position, createdBunch: BunchMeta | null, createdMarks: Mark[]];
-  insertAt(
+  insertWithFormat(
     index: number,
     format: Record<string, any>,
     ...values: T[]
@@ -160,12 +184,68 @@ export class RichList<T> {
 
   formattedSlices(): FormattedSlice[] {
     // TODO: combine identical neighbors; opts
-    return this.formatting
-      .formattedSpans()
-      .map((span) => ({
-        ...sliceFromSpan(this.list, span.start, span.end),
-        format: span.format,
-      }));
+    return this.formatting.formattedSpans().map((span) => ({
+      ...sliceFromSpan(this.list, span.start, span.end),
+      format: span.format,
+    }));
+  }
+
+  // Wrappers for formatting methods.
+
+  addMark(mark: Mark): FormatChange[] {
+    this.timestamp = Math.max(this.timestamp, mark.timestamp);
+    return this.formatting.addMark(mark);
+  }
+
+  deleteMark(mark: Mark): FormatChange[] {
+    return this.formatting.deleteMark(mark);
+  }
+
+  clearFormatting(): void {
+    this.formatting.clear();
+  }
+
+  clear() {
+    this.list.clear();
+    this.formatting.clear();
+  }
+
+  getFormat(pos: Position): Record<string, any> {
+    return this.formatting.getFormat(pos);
+  }
+
+  getFormatAt(index: number): Record<string, any> {
+    return this.formatting.getFormat(this.list.positionAt(index));
+  }
+
+  formattedSpans(): FormattedSpan[] {
+    return this.formatting.formattedSpans();
+  }
+
+  marks(): IterableIterator<Mark> {
+    return this.formatting.marks();
+  }
+
+  saveFormatting(): Mark[] {
+    return this.formatting.save();
+  }
+
+  loadFormatting(savedState: Mark[]): void {
+    this.formatting.load(savedState);
+  }
+
+  save(): RichListSavedState<T> {
+    return {
+      order: this.order.save(),
+      list: this.list.save(),
+      formatting: this.formatting.save(),
+    };
+  }
+
+  load(savedState: RichListSavedState<T>): void {
+    this.order.load(savedState.order);
+    this.list.load(savedState.list);
+    this.formatting.load(savedState.formatting);
   }
 
   // Other ops only involve one of (list, formatting); do it directly on them?

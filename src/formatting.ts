@@ -49,18 +49,18 @@ export type FormatChange = {
   format: Record<string, any>;
 };
 
-export class Formatting<S extends AbstractMark> {
+export class Formatting<M extends AbstractMark> {
   /**
    * All marks in sort order.
    *
    * Readonly except for this.load.
    */
-  private orderedMarks: S[];
+  private orderedMarks: M[];
   /**
    * A view of orderedMarks that is designed for easy querying.
    * This is mostly as described in the Peritext paper.
    */
-  private readonly formatList: List<FormatData<S>>;
+  private readonly formatList: List<FormatData<M>>;
 
   /**
    *
@@ -70,7 +70,7 @@ export class Formatting<S extends AbstractMark> {
    */
   constructor(
     readonly order: Order,
-    readonly compareMarks: (a: S, b: S) => number
+    readonly compareMarks: (a: M, b: M) => number
   ) {
     // If init is changed, also update clear().
     this.orderedMarks = [];
@@ -84,7 +84,7 @@ export class Formatting<S extends AbstractMark> {
    * (or its current index, if present). Comparisons use compareMark
    * and assume list is sorted in ascending order with no duplicates.
    */
-  private locateMark(list: S[], mark: S): number {
+  private locateMark(list: M[], mark: M): number {
     if (list.length === 0) return 0;
 
     // Common case: greater than all marks.
@@ -123,7 +123,7 @@ export class Formatting<S extends AbstractMark> {
   /**
    * @returns Format changes in order (not nec contiguous or the whole mark).
    */
-  addMark(mark: S): FormatChange[] {
+  addMark(mark: M): FormatChange[] {
     const index = this.locateMark(this.orderedMarks, mark);
     if (
       index < this.orderedMarks.length &&
@@ -247,12 +247,12 @@ export class Formatting<S extends AbstractMark> {
    *
    * Assumes pos is present in this.formatList and not Order.MIN_POSITION.
    */
-  private copyPrevAnchor(pos: Position): Map<string, S[]> {
+  private copyPrevAnchor(pos: Position): Map<string, M[]> {
     const posIndex = this.formatList.indexOfPosition(pos);
     // posIndex > 0 by assumption.
     const prevData = this.formatList.getAt(posIndex - 1);
     const toCopy = prevData.after ?? prevData.before!;
-    const copy = new Map<string, S[]>();
+    const copy = new Map<string, M[]>();
     for (const [key, marks] of toCopy) {
       // TODO: use shallow copy at first and clone-on-write?
       // For the keys that aren't changing.
@@ -264,9 +264,9 @@ export class Formatting<S extends AbstractMark> {
 
   private addToAnchor(
     anchor: Anchor,
-    anchorData: Map<string, S[]>,
+    anchorData: Map<string, M[]>,
     sliceBuilder: SpanBuilder<FormatChangeInternal>,
-    mark: S
+    mark: M
   ) {
     let marks = anchorData.get(mark.key);
     if (marks === undefined) {
@@ -289,7 +289,7 @@ export class Formatting<S extends AbstractMark> {
   /**
    * @returns Format changes in order (not nec contiguous or the whole mark).
    */
-  deleteMark(mark: S): FormatChange[] {
+  deleteMark(mark: M): FormatChange[] {
     const index = this.locateMark(this.orderedMarks, mark);
     if (
       index === this.orderedMarks.length ||
@@ -367,9 +367,9 @@ export class Formatting<S extends AbstractMark> {
 
   private deleteFromAnchor(
     anchor: Anchor,
-    anchorData: Map<string, S[]>,
+    anchorData: Map<string, M[]>,
     sliceBuilder: SpanBuilder<FormatChangeInternal>,
-    mark: S
+    mark: M
   ) {
     const marks = anchorData.get(mark.key)!;
     // This won't break the asymptotics b/c splice will be equally slow.
@@ -459,18 +459,18 @@ export class Formatting<S extends AbstractMark> {
    * TODO: explicit saving and loading that uses more internal format
    * for faster loading? E.g. sorting by compareMarks. (Warn not to change order.)
    */
-  marks(): IterableIterator<S> {
+  marks(): IterableIterator<M> {
     return this.orderedMarks[Symbol.iterator]();
   }
 
   // Save format: all marks in compareMarks order (same as marks()).
-  save(): S[] {
+  save(): M[] {
     return this.orderedMarks.slice();
   }
 
   // Overwrites existing state. (To merge, call addMarks in a loop.)
   // To see result, call formatted.
-  load(savedState: S[]): void {
+  load(savedState: M[]): void {
     this.clear();
 
     // TODO: can we do this more efficiently?

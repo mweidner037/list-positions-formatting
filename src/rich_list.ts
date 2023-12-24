@@ -1,11 +1,25 @@
-import { BunchMeta, List, Order, Position } from "list-positions";
-import { Anchor } from "./abstract_formatting";
-import { Formatting, Span } from "./formatting";
+import { BunchIDs, BunchMeta, List, Order, Position } from "list-positions";
+import { Anchor, Formatting } from "./formatting";
+import { anchorsFromSlice, diffFormats } from "./helpers";
+
+export type Span = {
+  start: Anchor;
+  end: Anchor;
+  key: string;
+  /** Anything except null - that's reserved to mean "delete this format". */
+  value: any;
+  creatorID: string;
+  /** Lamport timestamp. Ties broken by creatorID. Always positive. */
+  timestamp: number;
+};
 
 export class RichList<T> {
   readonly order: Order;
   readonly list: List<T>;
-  readonly formatting: Formatting;
+  readonly formatting: Formatting<Span>;
+
+  readonly replicaID: string;
+  private timestamp = 0;
 
   private readonly expandRules?: (
     key: string,
@@ -15,7 +29,9 @@ export class RichList<T> {
   onCreateSpan: ((createdSpan: Span) => void) | undefined = undefined;
 
   constructor(options?: {
+    // TODO: also accept list as arg?
     order?: Order; // If not provided, all are "after".
+    replicaID?: string;
     expandRules?: (
       key: string,
       value: any
@@ -23,9 +39,16 @@ export class RichList<T> {
   }) {
     this.order = options?.order ?? new Order();
     this.list = new List(this.order);
-    this.formatting = new Formatting(this.order);
+    this.formatting = new Formatting(this.order, RichList.compareSpans);
+    this.replicaID = options?.replicaID ?? BunchIDs.newReplicaID();
     this.expandRules = options?.expandRules;
   }
+
+  static compareSpans = (a: Span, b: Span): number => {
+    if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+    if (a.creatorID === b.creatorID) return 0;
+    return a.creatorID > b.creatorID ? 1 : -1;
+  };
 
   insertAt(
     index: number,
@@ -47,18 +70,35 @@ export class RichList<T> {
     createdSpans: Span[]
   ] {
     const [startPos, createdBunch] = this.list.insertAt(index, ...values);
-    const createdSpans = this.formatting.matchFormat(
-      this.list,
-      index,
-      format,
-      this.expandRules
+    // Inserted positions all get the same initial format because they are not
+    // interleaved with any existing positios.
+    const needsFormat = diffFormats(
+      this.formatting.getFormat(startPos),
+      format
     );
-    for (const createdSpan of createdSpans) {
-      this.formatting.addSpan(createdSpan);
+    const createdSpans: Span[] = [];
+    for (const [key, value] of needsFormat) {
+      const expand =
+        this.expandRules === undefined ? "after" : this.expandRules(key, value);
+      const { start, end } = anchorsFromSlice(
+        this.list,
+        index,
+        index + values.length,
+        expand
+      );
+      const span: Span = {
+        start,
+        end,
+        key,
+        value,
+        timestamp: ++this.timestamp,
+        creatorID: this.replicaID,
+      };
+      this.formatting.addSpan(span);
+      this.onCreateSpan?.(span);
+      createdSpans.push(span);
     }
-    if (this.onCreateSpan) {
-      for (const createdSpan of createdSpans) this.onCreateSpan(createdSpan);
-    }
+
     return [startPos, createdBunch, createdSpans];
   }
 
@@ -96,9 +136,16 @@ export class RichList<T> {
       end = { pos: this.list.positionAt(endIndex - 1), before: false };
     }
 
-    const span = this.formatting.newSpan({ start, end, key, value });
+    const span: Span = {
+      start,
+      end,
+      key,
+      value,
+      timestamp: ++this.timestamp,
+      creatorID: this.replicaID,
+    };
     this.formatting.addSpan(span);
-    if (this.onCreateSpan) this.onCreateSpan(span);
+    this.onCreateSpan?.(span);
     return span;
   }
 

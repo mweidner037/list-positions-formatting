@@ -1,5 +1,5 @@
 import { LexList, List, Order, Outline } from "list-positions";
-import { Anchor } from "./abstract_formatting";
+import { Anchor } from "./formatting";
 
 export function anchorsFromSlice(
   list: List<unknown> | LexList<unknown> | Outline,
@@ -55,10 +55,10 @@ export function sliceFromAnchors(
 
 /**
  * Returns changes (including null for deletions) to turn current into target.
- * 
+ *
  * Assumes current and target don't use null values.
  */
-export function formatDiff(
+export function diffFormats(
   current: Record<string, any>,
   target: Record<string, any>
 ): Map<string, any> {

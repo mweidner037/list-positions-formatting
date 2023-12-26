@@ -21,9 +21,9 @@ export function equalsAnchor(a: Anchor, b: Anchor): boolean {
 
 /**
  * Missing metadata needed for comparison,
- * e.g., a Lamport timestamp. Hence why "abstract" (not really).
+ * e.g., a Lamport timestamp. Hence why I.
  */
-export interface AbstractMark {
+export interface IMark {
   start: Anchor;
   end: Anchor;
   key: string;
@@ -49,7 +49,7 @@ export type FormatChange = {
   format: Record<string, any>;
 };
 
-export class Formatting<M extends AbstractMark> {
+export class Formatting<M extends IMark> {
   /**
    * All marks in sort order.
    *
@@ -485,7 +485,7 @@ export class Formatting<M extends AbstractMark> {
  * Note: after deletions, both fields may be empty, but they will never
  * both be undefined.
  */
-interface FormatData<S extends AbstractMark> {
+interface FormatData<S extends IMark> {
   /**
    * Marks starting at or strictly containing anchor { pos, before: true }.
    *
@@ -505,7 +505,7 @@ interface FormatData<S extends AbstractMark> {
 }
 
 function dataToRecord(
-  anchorData: Map<string, AbstractMark[]>
+  anchorData: Map<string, IMark[]>
 ): Record<string, unknown> {
   const ans: Record<string, unknown> = {};
   for (const [key, marks] of anchorData) {

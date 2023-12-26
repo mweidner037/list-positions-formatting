@@ -1,5 +1,4 @@
 import {
-  BunchIDs,
   BunchMeta,
   List,
   ListSavedState,
@@ -7,19 +6,9 @@ import {
   OrderSavedState,
   Position,
 } from "list-positions";
-import { Anchor, FormatChange, FormattedSpan, Formatting } from "./formatting";
+import { Anchor, FormatChange } from "./formatting";
 import { diffFormats, sliceFromSpan, spanFromSlice } from "./helpers";
-
-export type Mark = {
-  start: Anchor;
-  end: Anchor;
-  key: string;
-  /** Anything except null - that's reserved to mean "delete this format". */
-  value: any;
-  creatorID: string;
-  /** Lamport timestamp. Ties broken by creatorID. Always positive. */
-  timestamp: number;
-};
+import { TimestampFormatting, TimestampMark } from "./timestamp_formatting";
 
 export type FormattedSlice = {
   startIndex: number;
@@ -30,26 +19,26 @@ export type FormattedSlice = {
 export type RichListSavedState<T> = {
   order: OrderSavedState;
   list: ListSavedState<T>;
-  formatting: Mark[];
+  formatting: TimestampMark[];
 };
 
 export class RichList<T> {
   readonly order: Order;
   readonly list: List<T>;
-  private readonly formatting: Formatting<Mark>;
-
-  readonly replicaID: string;
-  private timestamp = 0;
+  readonly formatting: TimestampFormatting;
 
   private readonly expandRules?: (
     key: string,
     value: any
   ) => "after" | "before" | "none" | "both";
 
-  onCreateMark: ((createdMark: Mark) => void) | undefined = undefined;
+  /**
+   * Only called by this class's methods that create & return a Mark.
+   * Not called for formatting.newMark or formatting.addMark.
+   */
+  onCreateMark: ((createdMark: TimestampMark) => void) | undefined = undefined;
 
   constructor(options?: {
-    // TODO: also accept list as arg?
     order?: Order;
     // Takes precedence over order.
     list?: List<T>;
@@ -67,32 +56,28 @@ export class RichList<T> {
       this.order = options?.order ?? new Order();
       this.list = new List(this.order);
     }
-    // TODO: need to capture its created marks so we can update Lamport timestamp.
-    // But w/o breaking users own onCreateMark.
-    // Maybe subclass/wrapper is the best approach here?
-    this.formatting = new Formatting(this.order, RichList.compareMarks);
-    this.replicaID = options?.replicaID ?? BunchIDs.newReplicaID();
+    this.formatting = new TimestampFormatting(this.order, {
+      replicaID: options?.replicaID,
+    });
     this.expandRules = options?.expandRules;
   }
 
-  static compareMarks = (a: Mark, b: Mark): number => {
+  static compareMarks = (a: TimestampMark, b: TimestampMark): number => {
     if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
     if (a.creatorID === b.creatorID) return 0;
     return a.creatorID > b.creatorID ? 1 : -1;
   };
 
-  // TODO: return changes? So you know which key-value pairs changed,
-  // and to let you reuse event methods.
   insertWithFormat(
     index: number,
     format: Record<string, any>,
     value: T
-  ): [pos: Position, createdBunch: BunchMeta | null, createdMarks: Mark[]];
-  insertWithFormat(
-    index: number,
-    format: Record<string, any>,
-    ...values: T[]
-  ): [startPos: Position, createdBunch: BunchMeta | null, createdMarks: Mark[]];
+  ): [
+    pos: Position,
+    createdBunch: BunchMeta | null,
+    createdMarks: TimestampMark[],
+    changes: FormatChange[]
+  ];
   insertWithFormat(
     index: number,
     format: Record<string, any>,
@@ -100,7 +85,18 @@ export class RichList<T> {
   ): [
     startPos: Position,
     createdBunch: BunchMeta | null,
-    createdMarks: Mark[]
+    createdMarks: TimestampMark[],
+    changes: FormatChange[]
+  ];
+  insertWithFormat(
+    index: number,
+    format: Record<string, any>,
+    ...values: T[]
+  ): [
+    startPos: Position,
+    createdBunch: BunchMeta | null,
+    createdMarks: TimestampMark[],
+    changes: FormatChange[]
   ] {
     const [startPos, createdBunch] = this.list.insertAt(index, ...values);
     // Inserted positions all get the same initial format because they are not
@@ -109,7 +105,10 @@ export class RichList<T> {
       this.formatting.getFormat(startPos),
       format
     );
-    const createdMarks: Mark[] = [];
+    const createdMarks: TimestampMark[] = [];
+    // Since each mark affects a different key, these all commute.
+    // But for the record, they're stored in the order they happened.
+    const changes: FormatChange[] = [];
     for (const [key, value] of needsFormat) {
       const expand =
         this.expandRules === undefined ? "after" : this.expandRules(key, value);
@@ -119,20 +118,13 @@ export class RichList<T> {
         index + values.length,
         expand
       );
-      const mark: Mark = {
-        start,
-        end,
-        key,
-        value,
-        timestamp: ++this.timestamp,
-        creatorID: this.replicaID,
-      };
-      this.formatting.addMark(mark);
+      const mark = this.formatting.newMark(start, end, key, value);
+      changes.push(...this.formatting.addMark(mark));
       this.onCreateMark?.(mark);
       createdMarks.push(mark);
     }
 
-    return [startPos, createdBunch, createdMarks];
+    return [startPos, createdBunch, createdMarks, changes];
   }
 
   // TODO: matchFormat wrapper for later set/setAt? One that actually adds the marks.
@@ -143,7 +135,7 @@ export class RichList<T> {
     key: string,
     value: any,
     expand: "after" | "before" | "none" | "both" = "after"
-  ): Mark {
+  ): [createMark: TimestampMark, changes: FormatChange[]] {
     if (startIndex <= endIndex) {
       throw new Error(`startIndex <= endIndex: ${startIndex}, ${endIndex}`);
     }
@@ -169,17 +161,19 @@ export class RichList<T> {
       end = { pos: this.list.positionAt(endIndex - 1), before: false };
     }
 
-    const mark: Mark = {
-      start,
-      end,
-      key,
-      value,
-      timestamp: ++this.timestamp,
-      creatorID: this.replicaID,
-    };
-    this.formatting.addMark(mark);
+    const mark = this.formatting.newMark(start, end, key, value);
+    const changes = this.formatting.addMark(mark);
     this.onCreateMark?.(mark);
-    return mark;
+    return [mark, changes];
+  }
+
+  clear() {
+    this.list.clear();
+    this.formatting.clear();
+  }
+
+  getFormatAt(index: number): Record<string, any> {
+    return this.formatting.getFormat(this.list.positionAt(index));
   }
 
   formattedSlices(): FormattedSlice[] {
@@ -188,50 +182,6 @@ export class RichList<T> {
       ...sliceFromSpan(this.list, span.start, span.end),
       format: span.format,
     }));
-  }
-
-  // Wrappers for formatting methods.
-
-  addMark(mark: Mark): FormatChange[] {
-    this.timestamp = Math.max(this.timestamp, mark.timestamp);
-    return this.formatting.addMark(mark);
-  }
-
-  deleteMark(mark: Mark): FormatChange[] {
-    return this.formatting.deleteMark(mark);
-  }
-
-  clearFormatting(): void {
-    this.formatting.clear();
-  }
-
-  clear() {
-    this.list.clear();
-    this.formatting.clear();
-  }
-
-  getFormat(pos: Position): Record<string, any> {
-    return this.formatting.getFormat(pos);
-  }
-
-  getFormatAt(index: number): Record<string, any> {
-    return this.formatting.getFormat(this.list.positionAt(index));
-  }
-
-  formattedSpans(): FormattedSpan[] {
-    return this.formatting.formattedSpans();
-  }
-
-  marks(): IterableIterator<Mark> {
-    return this.formatting.marks();
-  }
-
-  saveFormatting(): Mark[] {
-    return this.formatting.save();
-  }
-
-  loadFormatting(savedState: Mark[]): void {
-    this.formatting.load(savedState);
   }
 
   save(): RichListSavedState<T> {
@@ -249,6 +199,4 @@ export class RichList<T> {
   }
 
   // Other ops only involve one of (list, formatting); do it directly on them?
-
-  // TODO: save/load
 }

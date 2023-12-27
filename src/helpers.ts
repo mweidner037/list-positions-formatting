@@ -56,14 +56,22 @@ export function sliceFromSpan(
 /**
  * Returns changes (including null for deletions) to turn current into target.
  *
- * Assumes current and target don't use null values.
+ * null values are ignored (treated as not present). TODO
  */
 export function diffFormats(
   current: Record<string, any>,
   target: Record<string, any>
 ): Map<string, any> {
-  const needsFormat = new Map(Object.entries(target));
+  const needsFormat = new Map<string, any>();
+  for (const [key, value] of Object.entries(target)) {
+    // Skip nulls as if not present.
+    if (value !== null) needsFormat.set(key, value);
+  }
   for (const [key, value] of Object.entries(current)) {
+    if (value === null) {
+      // Skip nulls as if not present.
+      continue;
+    }
     if (needsFormat.get(key) === value) {
       // Already formatted correctly.
       needsFormat.delete(key);

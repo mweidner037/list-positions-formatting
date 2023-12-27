@@ -10,9 +10,10 @@ import { Anchor, FormatChange } from "./formatting";
 import { diffFormats, sliceFromSpan, spanFromSlice } from "./helpers";
 import { TimestampFormatting, TimestampMark } from "./timestamp_formatting";
 
-export type FormattedSlice = {
+export type FormattedValues<T> = {
   startIndex: number;
   endIndex: number;
+  values: T[];
   format: Record<string, any>;
 };
 
@@ -68,6 +69,12 @@ export class RichList<T> {
     return a.creatorID > b.creatorID ? 1 : -1;
   };
 
+  /**
+   *
+   * @param index
+   * @param format null values treated as not-present.
+   * @param value
+   */
   insertWithFormat(
     index: number,
     format: Record<string, any>,
@@ -127,8 +134,6 @@ export class RichList<T> {
     return [startPos, createdBunch, createdMarks, changes];
   }
 
-  // TODO: matchFormat wrapper for later set/setAt? One that actually adds the marks.
-
   format(
     startIndex: number,
     endIndex: number,
@@ -176,12 +181,40 @@ export class RichList<T> {
     return this.formatting.getFormat(this.list.positionAt(index));
   }
 
-  formattedSlices(): FormattedSlice[] {
-    // TODO: combine identical neighbors; opts
-    return this.formatting.formattedSpans().map((span) => ({
-      ...sliceFromSpan(this.list, span.start, span.end),
-      format: span.format,
-    }));
+  formattedValues(): FormattedValues<T>[] {
+    // TODO: combine identical neighbors; opts.
+    // If nontrivial, copy opts in a Formatting.formattedSlices method.
+    const values = this.list.slice();
+    return this.formatting.formattedSpans().map((span) => {
+      const { startIndex, endIndex } = sliceFromSpan(
+        this.list,
+        span.start,
+        span.end
+      );
+      return {
+        startIndex,
+        endIndex,
+        values: values.slice(startIndex, endIndex),
+        format: span.format,
+      };
+    });
+  }
+
+  /**
+   * Long form of formattedValues that emits each value individually, like
+   * list.entries().
+   */
+  *entries(): IterableIterator<
+    [pos: Position, value: T, format: Record<string, any>]
+  > {
+    let index = 0;
+    for (const span of this.formatting.formattedSpans()) {
+      const { endIndex } = sliceFromSpan(this.list, span.start, span.end);
+      for (; index < endIndex; index++) {
+        const pos = this.list.positionAt(index);
+        yield [pos, this.list.get(pos)!, span.format];
+      }
+    }
   }
 
   save(): RichListSavedState<T> {

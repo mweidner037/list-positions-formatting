@@ -1,8 +1,5 @@
 import { BunchIDs, List, Order, Position } from "list-positions";
 
-// TODO: treat all falsy values like null? So you can use e.g. bold: false,
-// and so undefined doesn't cause confusion. See what Yjs, Quill, Automerge do.
-
 export type Anchor = {
   /**
    * Could be min or max position, but marks can't include them.
@@ -27,7 +24,10 @@ export interface IMark {
   start: Anchor;
   end: Anchor;
   key: string;
-  /** Anything except null - that's reserved to mean "delete this format". TODO: enforce */
+  /**
+   * null values are used to delete formats (won't show up in Record<string, any> maps).
+   * Anything else goes, but make sure you can serialize it.
+   */
   value: any;
 }
 
@@ -395,36 +395,65 @@ export class Formatting<M extends IMark> {
    * @throws If pos is min or max Position.
    */
   getFormat(pos: Position): Record<string, any> {
+    return dataToRecord(this.getFormatData(pos));
+  }
+
+  /**
+   * Might include null (overwriting) marks.
+   *
+   * @throws If pos is min or max Position.
+   */
+  getActiveMarks(pos: Position): Map<string, M> {
+    const active = new Map<string, M>();
+    for (const [key, marks] of this.getFormatData(pos)) {
+      if (marks.length !== 0) active.set(key, marks[marks.length - 1]);
+    }
+    return active;
+  }
+
+  /**
+   * Value arrays: in compareMarks order (increasing); always nonempty.
+   *
+   * @throws If pos is min or max Position.
+   */
+  getAllMarks(pos: Position): Map<string, M[]> {
+    // Defensive copy.
+    // Also, filter out possible empty values (due to deleteMark calls).
+    const copy = new Map<string, M[]>();
+    for (const [key, marks] of this.getFormatData(pos)) {
+      if (marks.length !== 0) copy.set(key, marks);
+    }
+    return copy;
+  }
+
+  /**
+   * Returns the format data that is active at pos (not necessarily
+   * keyed by pos).
+   *
+   * @throws If pos is min or max Position.
+   */
+  private getFormatData(pos: Position): Map<string, M[]> {
     if (pos.bunchID === BunchIDs.ROOT) {
       throw new Error("pos is the min or max Position");
     }
 
     const posData = this.formatList.get(pos);
-    if (posData?.before !== undefined) return dataToRecord(posData.before);
+    if (posData?.before !== undefined) return posData.before;
 
     // Since MIN_POSITION is always set, prevIndex is never -1.
     const prevIndex = this.formatList.indexOfPosition(pos, "left");
     const prevData = this.formatList.getAt(prevIndex)!;
-    return dataToRecord(prevData.after ?? prevData.before!);
+    return prevData.after ?? prevData.before!;
   }
 
-  // getActiveMarks(pos: Position): Map<string, S> {}
-
-  // For each key, nonempty and in precedence order.
-  // getAllMarks(pos: Position): Map<string, S[]> {}
-
-  // TODO: slice args?
-  // TODO: analog that takes a list and gives indices, combining matching neighbors
-  // and skipping deleted parts? Like Quill delta.
+  // TODO: slice args? E.g. so you can clear/overwrite a range's format.
   /**
    * The whole list as a series of spans with their current formats.
    *
    * In order; starts with open minPos, ends with open maxPos.
    */
   formattedSpans(): FormattedSpan[] {
-    const sliceBuilder = new SpanBuilder<Record<string, unknown>>(
-      recordEquals
-    );
+    const sliceBuilder = new SpanBuilder<Record<string, unknown>>(recordEquals);
     // formatList always contains the starting anchor, so this will cover the
     // whole beginning.
     for (const [pos, data] of this.formatList.entries()) {
@@ -449,15 +478,10 @@ export class Formatting<M extends IMark> {
     }));
   }
 
-  // TODO: formattedSlices that takes a list and can opt over spans past the end?
-
   /**
    * All marks, regardless of whether they are currently winning.
    *
    * In compareMarks order.
-   *
-   * TODO: explicit saving and loading that uses more internal format
-   * for faster loading? E.g. sorting by compareMarks. (Warn not to change order.)
    */
   marks(): IterableIterator<M> {
     return this.orderedMarks[Symbol.iterator]();

@@ -57,6 +57,8 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
     return super.addMark(mark);
   }
 
+  // TODO: TimestampFormattingSavedState type alias? Like OrderSavedState.
+
   load(savedState: TimestampMark[]): void {
     super.load(savedState);
     if (savedState.length !== 0) {

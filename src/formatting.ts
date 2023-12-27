@@ -49,6 +49,8 @@ export type FormatChange = {
   format: Record<string, any>;
 };
 
+// TODO: MIN_ANCHOR, MAX_ANCHOR static props? Useful in tests, below code.
+
 export class Formatting<M extends IMark> {
   /**
    * All marks in sort order.
@@ -160,7 +162,7 @@ export class Formatting<M extends IMark> {
     // later.
 
     const sliceBuilder = new SpanBuilder<FormatChangeInternal>(
-      formatChangeEquals
+      equalsFormatChangeInternal
     );
 
     const startIndex = this.formatList.indexOfPosition(mark.start.pos);
@@ -309,7 +311,7 @@ export class Formatting<M extends IMark> {
     // later.
 
     const sliceBuilder = new SpanBuilder<FormatChangeInternal>(
-      formatChangeEquals
+      equalsFormatChangeInternal
     );
 
     // Since the mark currently exists, its start and end anchors must have data.
@@ -453,7 +455,7 @@ export class Formatting<M extends IMark> {
    * In order; starts with open minPos, ends with open maxPos.
    */
   formattedSpans(): FormattedSpan[] {
-    const sliceBuilder = new SpanBuilder<Record<string, unknown>>(recordEquals);
+    const sliceBuilder = new SpanBuilder<Record<string, unknown>>(equalsRecord);
     // formatList always contains the starting anchor, so this will cover the
     // whole beginning.
     for (const [pos, data] of this.formatList.entries()) {
@@ -604,7 +606,7 @@ class SpanBuilder<D> {
   }
 }
 
-function recordEquals(
+function equalsRecord(
   a: Record<string, unknown>,
   b: Record<string, unknown>
 ): boolean {
@@ -626,10 +628,10 @@ type FormatChangeInternal = {
   format: Record<string, unknown>;
 } | null;
 
-function formatChangeEquals(
+function equalsFormatChangeInternal(
   a: FormatChangeInternal,
   b: FormatChangeInternal
 ): boolean {
   if (a === null || b === null) return a === b;
-  return a.otherValue === b.otherValue && recordEquals(a.format, b.format);
+  return a.otherValue === b.otherValue && equalsRecord(a.format, b.format);
 }

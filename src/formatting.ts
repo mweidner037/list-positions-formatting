@@ -280,7 +280,7 @@ export class Formatting<M extends IMark> {
     if (index === marks.length - 1) {
       // New mark wins over old. Record the change.
       sliceBuilder.add(anchor, {
-        otherValue: marks.length === 1 ? null : marks[marks.length - 2],
+        otherValue: marks.length === 1 ? null : marks[marks.length - 2].value,
         format: dataToRecord(anchorData),
       });
     } else sliceBuilder.add(anchor, null);
@@ -419,11 +419,11 @@ export class Formatting<M extends IMark> {
    * @throws If pos is min or max Position.
    */
   getAllMarks(pos: Position): Map<string, M[]> {
-    // Defensive copy.
+    // Defensive deep copy.
     // Also, filter out possible empty values (due to deleteMark calls).
     const copy = new Map<string, M[]>();
     for (const [key, marks] of this.getFormatData(pos)) {
-      if (marks.length !== 0) copy.set(key, marks);
+      if (marks.length !== 0) copy.set(key, marks.slice());
     }
     return copy;
   }

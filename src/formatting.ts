@@ -377,6 +377,11 @@ export class Formatting<M extends IMark> {
     // This won't break the asymptotics b/c splice will be equally slow.
     const index = marks.lastIndexOf(mark);
     marks.splice(index, 1);
+    // Preserve the invariant that anchorData arrays are never empty.
+    if (marks.length === 0) {
+      anchorData.delete(mark.key);
+    }
+
     if (index === marks.length) {
       // Deleted mark used to win. Record the change.
       sliceBuilder.add(anchor, {
@@ -408,7 +413,7 @@ export class Formatting<M extends IMark> {
   getActiveMarks(pos: Position): Map<string, M> {
     const active = new Map<string, M>();
     for (const [key, marks] of this.getFormatData(pos)) {
-      if (marks.length !== 0) active.set(key, marks[marks.length - 1]);
+      active.set(key, marks[marks.length - 1]);
     }
     return active;
   }
@@ -420,10 +425,9 @@ export class Formatting<M extends IMark> {
    */
   getAllMarks(pos: Position): Map<string, M[]> {
     // Defensive deep copy.
-    // Also, filter out possible empty values (due to deleteMark calls).
     const copy = new Map<string, M[]>();
     for (const [key, marks] of this.getFormatData(pos)) {
-      if (marks.length !== 0) copy.set(key, marks.slice());
+      copy.set(key, marks.slice());
     }
     return copy;
   }
@@ -510,6 +514,8 @@ export class Formatting<M extends IMark> {
  *
  * Note: after deletions, both fields may be empty, but they will never
  * both be undefined.
+ *
+ * Marks arrays are never empty.
  */
 interface FormatData<S extends IMark> {
   /**
@@ -535,12 +541,8 @@ function dataToRecord(
 ): Record<string, unknown> {
   const ans: Record<string, unknown> = {};
   for (const [key, marks] of anchorData) {
-    // TODO: delete 0-length arrays instead of checking them everywhere,
-    // to avoid surprises after deletes.
-    if (marks.length !== 0) {
-      const mark = marks[marks.length - 1];
-      if (mark.value !== null) ans[key] = mark.value;
-    }
+    const mark = marks[marks.length - 1];
+    if (mark.value !== null) ans[key] = mark.value;
   }
   return ans;
 }

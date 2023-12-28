@@ -100,7 +100,7 @@ export class Formatting<M extends IMark> {
       // Common case: mark is "recent" - among the last 10 marks.
       // Search those linearly in reverse.
       for (let i = list.length - 1; i >= minus10; i--) {
-        if (this.compareMarks(mark, list[1]) > 0) return i + 1;
+        if (this.compareMarks(mark, list[i]) > 0) return i + 1;
       }
       // If we get here, the mark is == minus10. TODO: check.
       return minus10;
@@ -380,7 +380,7 @@ export class Formatting<M extends IMark> {
     if (index === marks.length) {
       // Deleted mark used to win. Record the change.
       sliceBuilder.add(anchor, {
-        otherValue: marks.length === 0 ? null : marks[marks.length - 1],
+        otherValue: marks.length === 0 ? null : marks[marks.length - 1].value,
         format: dataToRecord(anchorData),
       });
     } else sliceBuilder.add(anchor, null);
@@ -535,8 +535,12 @@ function dataToRecord(
 ): Record<string, unknown> {
   const ans: Record<string, unknown> = {};
   for (const [key, marks] of anchorData) {
-    const mark = marks[marks.length - 1];
-    if (mark.value !== null) ans[key] = mark.value;
+    // TODO: delete 0-length arrays instead of checking them everywhere,
+    // to avoid surprises after deletes.
+    if (marks.length !== 0) {
+      const mark = marks[marks.length - 1];
+      if (mark.value !== null) ans[key] = mark.value;
+    }
   }
   return ans;
 }

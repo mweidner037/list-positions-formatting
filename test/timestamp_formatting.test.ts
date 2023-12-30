@@ -2,7 +2,7 @@ import { assert } from "chai";
 import { BunchIDs, List, Order, Position } from "list-positions";
 import { describe, test } from "mocha";
 import seedrandom from "seedrandom";
-import { FormattedSpan, TimestampFormatting } from "../src";
+import { FormattedSpan, TimestampFormatting, TimestampMark } from "../src";
 
 describe("TimestampFormatting", () => {
   let rng!: seedrandom.prng;
@@ -25,7 +25,7 @@ describe("TimestampFormatting", () => {
       });
     });
 
-    function checkGetters() {
+    function checkMisc() {
       // At each Position, check that getFormat matches formattedSpans().
       // Also sanity check all getters.
       let i = 0;
@@ -58,7 +58,29 @@ describe("TimestampFormatting", () => {
           i++;
         }
       }
+
+      // Test save and load.
+      const order2 = new Order();
+      order2.load(formatting.order.save());
+      const formatting2 = new TimestampFormatting(order2);
+      formatting2.load(formatting.save());
+      assert.deepStrictEqual(
+        formatting2.formattedSpans(),
+        formatting.formattedSpans()
+      );
     }
+
+    test("empty formatting", () => {
+      assert.deepStrictEqual(formatting.formattedSpans(), [
+        {
+          start: { pos: Order.MIN_POSITION, before: false },
+          end: { pos: Order.MAX_POSITION, before: true },
+          format: {},
+        },
+      ]);
+      checkMisc();
+    });
+
     test("one mark", () => {
       // Add one mark and check changes & formattedSpans.
       let t = 1;
@@ -110,7 +132,7 @@ describe("TimestampFormatting", () => {
             });
           }
           assert.deepStrictEqual(formatting.formattedSpans(), spans);
-          checkGetters();
+          checkMisc();
 
           t++;
         }
@@ -161,7 +183,7 @@ describe("TimestampFormatting", () => {
                   format: { italic: true },
                 },
               ]);
-              checkGetters();
+              checkMisc();
             }
           }
         }
@@ -223,7 +245,56 @@ describe("TimestampFormatting", () => {
                   format: { url: "www2" },
                 },
               ]);
-              checkGetters();
+              checkMisc();
+            }
+          }
+        }
+      });
+
+      test("null mark", () => {
+        for (const before1 of [true, false]) {
+          for (const before2 of [true, false]) {
+            for (const before3 of [true, false]) {
+              formatting.clear();
+              const mark1 = formatting.newMark(
+                { pos: Order.MIN_POSITION, before: false },
+                { pos: poss[6], before: before1 },
+                "url",
+                "www1"
+              );
+              formatting.addMark(mark1);
+              // This wins over mark1, clearing it.
+              const mark2 = formatting.newMark(
+                { pos: poss[3], before: before2 },
+                { pos: poss[9], before: before3 },
+                "url",
+                null
+              );
+
+              const changes = formatting.addMark(mark2);
+              assert.deepStrictEqual(formatting.formattedSpans(), [
+                {
+                  start: { pos: Order.MIN_POSITION, before: false },
+                  end: { pos: poss[3], before: before2 },
+                  format: { url: "www1" },
+                },
+                {
+                  start: { pos: poss[3], before: before2 },
+                  end: { pos: Order.MAX_POSITION, before: true },
+                  format: {},
+                },
+              ]);
+              assert.deepStrictEqual(changes, [
+                {
+                  start: { pos: poss[3], before: before2 },
+                  end: { pos: poss[6], before: before1 },
+                  key: "url",
+                  value: null,
+                  previousValue: "www1",
+                  format: {},
+                },
+              ]);
+              checkMisc();
             }
           }
         }
@@ -286,7 +357,7 @@ describe("TimestampFormatting", () => {
                   format: { url: "www2" },
                 },
               ]);
-              checkGetters();
+              checkMisc();
             }
           }
         }
@@ -339,7 +410,7 @@ describe("TimestampFormatting", () => {
                 format: { url: "www2" },
               },
             ]);
-            checkGetters();
+            checkMisc();
           }
         }
       });
@@ -391,7 +462,7 @@ describe("TimestampFormatting", () => {
                 format: { url: "www2" },
               },
             ]);
-            checkGetters();
+            checkMisc();
           }
         }
       });
@@ -460,7 +531,7 @@ describe("TimestampFormatting", () => {
                 format: { url: "www2" },
               },
             ]);
-            checkGetters();
+            checkMisc();
           }
         }
       });
@@ -526,7 +597,7 @@ describe("TimestampFormatting", () => {
                 format: { url: "www2" },
               },
             ]);
-            checkGetters();
+            checkMisc();
           }
         }
       });
@@ -582,7 +653,7 @@ describe("TimestampFormatting", () => {
               format: { url: "www2" },
             },
           ]);
-          checkGetters();
+          checkMisc();
         }
       });
 
@@ -641,7 +712,7 @@ describe("TimestampFormatting", () => {
               format: { url: "www2" },
             },
           ]);
-          checkGetters();
+          checkMisc();
         }
       });
 
@@ -696,7 +767,7 @@ describe("TimestampFormatting", () => {
               format: { url: "www2" },
             },
           ]);
-          checkGetters();
+          checkMisc();
         }
       });
 
@@ -755,7 +826,7 @@ describe("TimestampFormatting", () => {
               format: { url: "www2" },
             },
           ]);
-          checkGetters();
+          checkMisc();
         }
       });
 
@@ -809,7 +880,7 @@ describe("TimestampFormatting", () => {
                   format: { url: "www1" },
                 },
               ]);
-              checkGetters();
+              checkMisc();
             }
           }
         }
@@ -850,7 +921,7 @@ describe("TimestampFormatting", () => {
             format: {},
           },
         ]);
-        checkGetters();
+        checkMisc();
 
         const changes1 = formatting.deleteMark(mark3);
         assert.deepStrictEqual(formatting.formattedSpans(), [
@@ -880,7 +951,7 @@ describe("TimestampFormatting", () => {
             format: { url: "www2" },
           },
         ]);
-        checkGetters();
+        checkMisc();
 
         const changes2 = formatting.deleteMark(mark1);
         assert.deepStrictEqual(formatting.formattedSpans(), [
@@ -910,7 +981,7 @@ describe("TimestampFormatting", () => {
             format: {},
           },
         ]);
-        checkGetters();
+        checkMisc();
 
         const changes3 = formatting.addMark(mark3);
         assert.deepStrictEqual(formatting.formattedSpans(), [
@@ -940,7 +1011,7 @@ describe("TimestampFormatting", () => {
             format: { url: "www1" },
           },
         ]);
-        checkGetters();
+        checkMisc();
 
         // Test redundant add/delete.
         const formatBefore = formatting.formattedSpans();
@@ -950,8 +1021,409 @@ describe("TimestampFormatting", () => {
         assert.deepStrictEqual(formatting.formattedSpans(), formatBefore);
         assert.deepStrictEqual(formatting.deleteMark(mark1), []);
         assert.deepStrictEqual(formatting.formattedSpans(), formatBefore);
-        checkGetters();
+        checkMisc();
       });
+
+      // Test binary search by adding many marks in random order.
+      test("many out-of-order marks", () => {
+        const marks: TimestampMark[] = [];
+        for (let i = 0; i < 100; i++) {
+          marks.push(
+            formatting.newMark(
+              { pos: poss[1], before: true },
+              { pos: poss[5], before: true },
+              "url",
+              "www" + i
+            )
+          );
+        }
+
+        // Add the marks in random order, sometimes redundantly.
+        let greatestIndex = -1;
+        const allMarks = new Set<TimestampMark>();
+        for (let i = 0; i < 200; i++) {
+          const index = Math.floor(rng() * marks.length);
+          allMarks.add(marks[index]);
+          const changes = formatting.addMark(marks[index]);
+          if (index > greatestIndex) {
+            assert.deepStrictEqual(changes, [
+              {
+                start: { pos: poss[1], before: true },
+                end: { pos: poss[5], before: true },
+                key: "url",
+                value: "www" + index,
+                previousValue:
+                  greatestIndex === -1 ? null : "www" + greatestIndex,
+                format: { url: "www" + index },
+              },
+            ]);
+            greatestIndex = index;
+          } else {
+            assert.deepStrictEqual(changes, []);
+          }
+          assert.deepStrictEqual(formatting.formattedSpans(), [
+            {
+              start: { pos: Order.MIN_POSITION, before: false },
+              end: { pos: poss[1], before: true },
+              format: {},
+            },
+            {
+              start: { pos: poss[1], before: true },
+              end: { pos: poss[5], before: true },
+              format: { url: "www" + greatestIndex },
+            },
+            {
+              start: { pos: poss[5], before: true },
+              end: { pos: Order.MAX_POSITION, before: true },
+              format: {},
+            },
+          ]);
+        }
+
+        // Check that all marks are in order.
+        let allMarksSorted = [...allMarks];
+        allMarksSorted.sort((a, b) => a.timestamp - b.timestamp);
+        assert.deepStrictEqual([...formatting.marks()], allMarksSorted);
+        assert.deepStrictEqual(
+          formatting.getAllMarks(poss[3]).get("url"),
+          allMarksSorted
+        );
+
+        // Delete some of the marks at random.
+        for (let i = 0; i < 50; i++) {
+          const index = Math.floor(rng() * marks.length);
+          allMarks.delete(marks[index]);
+          formatting.deleteMark(marks[index]);
+        }
+
+        // Check that all marks are still in order.
+        allMarksSorted = [...allMarks];
+        allMarksSorted.sort((a, b) => a.timestamp - b.timestamp);
+        assert.deepStrictEqual([...formatting.marks()], allMarksSorted);
+        assert.deepStrictEqual(
+          formatting.getAllMarks(poss[3]).get("url"),
+          allMarksSorted
+        );
+
+        // Check resulting formatting.
+        const winner = allMarksSorted.at(-1)!;
+        assert.deepStrictEqual(formatting.formattedSpans(), [
+          {
+            start: { pos: Order.MIN_POSITION, before: false },
+            end: { pos: poss[1], before: true },
+            format: {},
+          },
+          {
+            start: { pos: poss[1], before: true },
+            end: { pos: poss[5], before: true },
+            format: { url: winner.value },
+          },
+          {
+            start: { pos: poss[5], before: true },
+            end: { pos: Order.MAX_POSITION, before: true },
+            format: {},
+          },
+        ]);
+      });
+    });
+
+    test("errors", () => {
+      // Out-of-order mark endpoints.
+      assert.throws(() => {
+        formatting.addMark(
+          formatting.newMark(
+            { pos: Order.MAX_POSITION, before: true },
+            { pos: Order.MIN_POSITION, before: false },
+            "italic",
+            true
+          )
+        );
+      });
+      assert.throws(() => {
+        formatting.addMark(
+          formatting.newMark(
+            { pos: poss[3], before: true },
+            { pos: Order.MIN_POSITION, before: false },
+            "italic",
+            true
+          )
+        );
+      });
+      assert.throws(() => {
+        formatting.addMark(
+          formatting.newMark(
+            { pos: poss[3], before: true },
+            { pos: poss[2], before: false },
+            "italic",
+            true
+          )
+        );
+      });
+      assert.throws(() => {
+        formatting.addMark(
+          formatting.newMark(
+            { pos: poss[3], before: false },
+            { pos: poss[3], before: false },
+            "italic",
+            true
+          )
+        );
+      });
+      assert.throws(() => {
+        formatting.addMark(
+          formatting.newMark(
+            { pos: poss[3], before: false },
+            { pos: poss[3], before: true },
+            "italic",
+            true
+          )
+        );
+      });
+
+      assert.doesNotThrow(() => {
+        formatting.addMark(
+          formatting.newMark(
+            { pos: poss[3], before: true },
+            { pos: poss[3], before: false },
+            "italic",
+            true
+          )
+        );
+      });
+
+      // Min/max format data.
+      assert.throws(() => {
+        formatting.getFormat(Order.MIN_POSITION);
+      });
+      assert.throws(() => {
+        formatting.getFormat(Order.MAX_POSITION);
+      });
+      assert.doesNotThrow(() => {
+        formatting.getFormat(poss[0]);
+      });
+      assert.doesNotThrow(() => {
+        formatting.getFormat(poss.at(-1)!);
+      });
+    });
+
+    test("empty load", () => {
+      formatting.load([]);
+      assert.strictEqual(
+        formatting.newMark(
+          { pos: poss[1], before: true },
+          { pos: poss[9], before: true },
+          "url",
+          "www1"
+        ).timestamp,
+        1
+      );
+    });
+  });
+
+  describe("two instances", () => {
+    let aliceList!: List<string>;
+    let alice!: TimestampFormatting;
+    let bobList!: List<string>;
+    let bob!: TimestampFormatting;
+    // 10 Positions to use.
+    let poss!: Position[];
+
+    beforeEach(() => {
+      aliceList = new List();
+      const startPos = aliceList.insertAt(0, ..."0123456789")[0];
+      poss = Order.startPosToArray(startPos, 10);
+
+      bobList = new List();
+      bobList.order.load(aliceList.order.save());
+      bobList.load(aliceList.save());
+
+      alice = new TimestampFormatting(aliceList.order, {
+        replicaID: "alice",
+      });
+      bob = new TimestampFormatting(bobList.order, {
+        replicaID: "bob",
+      });
+    });
+
+    test("concurrent marks 1", () => {
+      const aMark = alice.newMark(
+        { pos: poss[1], before: true },
+        { pos: poss[9], before: true },
+        "url",
+        "www1"
+      );
+      alice.addMark(aMark);
+      const bMark = bob.newMark(
+        { pos: poss[3], before: true },
+        { pos: poss[5], before: true },
+        "url",
+        "www2"
+      );
+      bob.addMark(bMark);
+
+      // Simulate collaboration.
+      // Since "bob" > "alice", bMark wins.
+      const aChanges = alice.addMark(bMark);
+      assert.deepStrictEqual(aChanges, [
+        {
+          start: { pos: poss[3], before: true },
+          end: { pos: poss[5], before: true },
+          key: "url",
+          value: "www2",
+          previousValue: "www1",
+          format: { url: "www2" },
+        },
+      ]);
+      assert.deepStrictEqual(alice.formattedSpans(), [
+        {
+          start: { pos: Order.MIN_POSITION, before: false },
+          end: { pos: poss[1], before: true },
+          format: {},
+        },
+        {
+          start: { pos: poss[1], before: true },
+          end: { pos: poss[3], before: true },
+          format: { url: "www1" },
+        },
+        {
+          start: { pos: poss[3], before: true },
+          end: { pos: poss[5], before: true },
+          format: { url: "www2" },
+        },
+        {
+          start: { pos: poss[5], before: true },
+          end: { pos: poss[9], before: true },
+          format: { url: "www1" },
+        },
+        {
+          start: { pos: poss[9], before: true },
+          end: { pos: Order.MAX_POSITION, before: true },
+          format: {},
+        },
+      ]);
+
+      const bChanges = bob.addMark(aMark);
+      assert.deepStrictEqual(bChanges, [
+        {
+          start: { pos: poss[1], before: true },
+          end: { pos: poss[3], before: true },
+          key: "url",
+          value: "www1",
+          previousValue: null,
+          format: { url: "www1" },
+        },
+        {
+          start: { pos: poss[5], before: true },
+          end: { pos: poss[9], before: true },
+          key: "url",
+          value: "www1",
+          previousValue: null,
+          format: { url: "www1" },
+        },
+      ]);
+      assert.deepStrictEqual(bob.formattedSpans(), alice.formattedSpans());
+    });
+
+    test("concurrent marks 2", () => {
+      // Ranges are swapped relative to "concurrent marks 1".
+      const aMark = alice.newMark(
+        { pos: poss[3], before: true },
+        { pos: poss[5], before: true },
+        "url",
+        "www1"
+      );
+      alice.addMark(aMark);
+      const bMark = bob.newMark(
+        { pos: poss[1], before: true },
+        { pos: poss[9], before: true },
+        "url",
+        "www2"
+      );
+      bob.addMark(bMark);
+
+      // Simulate collaboration.
+      // Since "bob" > "alice", bMark wins.
+      const aChanges = alice.addMark(bMark);
+      assert.deepStrictEqual(aChanges, [
+        {
+          start: { pos: poss[1], before: true },
+          end: { pos: poss[3], before: true },
+          key: "url",
+          value: "www2",
+          previousValue: null,
+          format: { url: "www2" },
+        },
+        {
+          start: { pos: poss[3], before: true },
+          end: { pos: poss[5], before: true },
+          key: "url",
+          value: "www2",
+          previousValue: "www1",
+          format: { url: "www2" },
+        },
+        {
+          start: { pos: poss[5], before: true },
+          end: { pos: poss[9], before: true },
+          key: "url",
+          value: "www2",
+          previousValue: null,
+          format: { url: "www2" },
+        },
+      ]);
+      assert.deepStrictEqual(alice.formattedSpans(), [
+        {
+          start: { pos: Order.MIN_POSITION, before: false },
+          end: { pos: poss[1], before: true },
+          format: {},
+        },
+        {
+          start: { pos: poss[1], before: true },
+          end: { pos: poss[9], before: true },
+          format: { url: "www2" },
+        },
+        {
+          start: { pos: poss[9], before: true },
+          end: { pos: Order.MAX_POSITION, before: true },
+          format: {},
+        },
+      ]);
+
+      const bChanges = bob.addMark(aMark);
+      assert.deepStrictEqual(bChanges, []);
+      assert.deepStrictEqual(bob.formattedSpans(), alice.formattedSpans());
+    });
+
+    test("Lamport timestamp updates", () => {
+      const start = { pos: poss[1], before: true };
+      const end = { pos: poss[9], before: true };
+      const mark: TimestampMark = {
+        start,
+        end,
+        key: "url",
+        value: "www1",
+        creatorID: alice.replicaID,
+        timestamp: 10,
+      };
+      alice.addMark(mark);
+      assert.strictEqual(
+        alice.newMark(start, end, "url", "www1").timestamp,
+        11
+      );
+      bob.addMark(mark);
+      assert.strictEqual(bob.newMark(start, end, "url", "www1").timestamp, 11);
+
+      const mark2: TimestampMark = {
+        start,
+        end,
+        key: "url",
+        value: "www1",
+        creatorID: alice.replicaID,
+        timestamp: 20,
+      };
+      alice.addMark(mark2);
+
+      bob.load(alice.save());
+      assert.strictEqual(bob.newMark(start, end, "url", "www1").timestamp, 21);
     });
   });
 });

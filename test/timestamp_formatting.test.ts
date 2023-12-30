@@ -192,8 +192,171 @@ describe("TimestampFormatting", () => {
         }
       });
 
-      // TODO: spans that touch same anchor.
-      // TODO: spans that touch same pos but different anchors.
+      // Test spans that touch the same anchors.
+      test("same start anchor", () => {
+        for (const before1 of [true, false]) {
+          for (const before2 of [true, false]) {
+            for (const before3 of [true, false]) {
+              formatting.clear();
+              const mark1 = formatting.newMark(
+                { pos: pos[3], before: before2 },
+                { pos: pos[6], before: before1 },
+                "url",
+                "www1"
+              );
+              formatting.addMark(mark1);
+              // This wins over mark1.
+              const mark2 = formatting.newMark(
+                { pos: pos[3], before: before2 },
+                { pos: pos[9], before: before3 },
+                "url",
+                "www2"
+              );
+
+              const changes = formatting.addMark(mark2);
+              assert.deepStrictEqual(formatting.formattedSpans(), [
+                {
+                  start: { pos: Order.MIN_POSITION, before: false },
+                  end: { pos: pos[3], before: before2 },
+                  format: {},
+                },
+                {
+                  start: { pos: pos[3], before: before2 },
+                  end: { pos: pos[9], before: before3 },
+                  format: { url: "www2" },
+                },
+                {
+                  start: { pos: pos[9], before: before3 },
+                  end: { pos: Order.MAX_POSITION, before: true },
+                  format: {},
+                },
+              ]);
+              assert.deepStrictEqual(changes, [
+                {
+                  start: { pos: pos[3], before: before2 },
+                  end: { pos: pos[6], before: before1 },
+                  key: "url",
+                  value: "www2",
+                  previousValue: "www1",
+                  format: { url: "www2" },
+                },
+                {
+                  start: { pos: pos[6], before: before1 },
+                  end: { pos: pos[9], before: before3 },
+                  key: "url",
+                  value: "www2",
+                  previousValue: null,
+                  format: { url: "www2" },
+                },
+              ]);
+            }
+          }
+        }
+      });
+
+      test("same end anchor", () => {
+        for (const before1 of [true, false]) {
+          for (const before2 of [true, false]) {
+            formatting.clear();
+            const mark1 = formatting.newMark(
+              { pos: Order.MIN_POSITION, before: false },
+              { pos: pos[6], before: before1 },
+              "url",
+              "www1"
+            );
+            formatting.addMark(mark1);
+            // This wins over mark1.
+            const mark2 = formatting.newMark(
+              { pos: pos[3], before: before2 },
+              { pos: pos[6], before: before1 },
+              "url",
+              "www2"
+            );
+
+            const changes = formatting.addMark(mark2);
+            assert.deepStrictEqual(formatting.formattedSpans(), [
+              {
+                start: { pos: Order.MIN_POSITION, before: false },
+                end: { pos: pos[3], before: before2 },
+                format: { url: "www1" },
+              },
+              {
+                start: { pos: pos[3], before: before2 },
+                end: { pos: pos[6], before: before1 },
+                format: { url: "www2" },
+              },
+              {
+                start: { pos: pos[6], before: before1 },
+                end: { pos: Order.MAX_POSITION, before: true },
+                format: {},
+              },
+            ]);
+            assert.deepStrictEqual(changes, [
+              {
+                start: { pos: pos[3], before: before2 },
+                end: { pos: pos[6], before: before1 },
+                key: "url",
+                value: "www2",
+                previousValue: "www1",
+                format: { url: "www2" },
+              },
+            ]);
+          }
+        }
+      });
+
+      // One mark's end is the next's start.
+      test("same start/end anchor", () => {
+        for (const before1 of [true, false]) {
+          for (const before3 of [true, false]) {
+            formatting.clear();
+            const mark1 = formatting.newMark(
+              { pos: Order.MIN_POSITION, before: false },
+              { pos: pos[6], before: before1 },
+              "url",
+              "www1"
+            );
+            formatting.addMark(mark1);
+            const mark2 = formatting.newMark(
+              { pos: pos[6], before: before1 },
+              { pos: pos[9], before: before3 },
+              "url",
+              "www2"
+            );
+
+            const changes = formatting.addMark(mark2);
+            assert.deepStrictEqual(formatting.formattedSpans(), [
+              {
+                start: { pos: Order.MIN_POSITION, before: false },
+                end: { pos: pos[6], before: before1 },
+                format: { url: "www1" },
+              },
+              {
+                start: { pos: pos[6], before: before1 },
+                end: { pos: pos[9], before: before3 },
+                format: { url: "www2" },
+              },
+              {
+                start: { pos: pos[9], before: before3 },
+                end: { pos: Order.MAX_POSITION, before: true },
+                format: {},
+              },
+            ]);
+            assert.deepStrictEqual(changes, [
+              {
+                start: { pos: pos[6], before: before1 },
+                end: { pos: pos[9], before: before3 },
+                key: "url",
+                value: "www2",
+                previousValue: null,
+                format: { url: "www2" },
+              },
+            ]);
+          }
+        }
+      });
+
+      // TODO: spans that touch same pos but different anchors. Non-overlapping and overlapping; start vs end.
 
       // Same as "conflicting marks", but we add the marks in
       // the wrong order.

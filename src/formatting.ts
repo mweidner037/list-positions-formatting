@@ -222,10 +222,6 @@ export class Formatting<M extends IMark> {
    * copying the correct values from the previous FormatData.
    */
   private createData(anchor: Anchor): void {
-    // We never need to create start or end: start is created in the
-    // constructor, and end is not stored.
-    if (anchor.pos === null) return;
-
     let data = this.formatList.get(anchor.pos);
     if (data === undefined) {
       data = {};
@@ -454,8 +450,9 @@ export class Formatting<M extends IMark> {
     const posData = this.formatList.get(pos);
     if (posData?.before !== undefined) return posData.before;
 
-    // Since MIN_POSITION is always set, prevIndex is never -1.
-    const prevIndex = this.formatList.indexOfPosition(pos, "left");
+    // Since MIN_POSITION is always present and less than pos,
+    // prevIndex is never -1.
+    const prevIndex = this.formatList.indexOfPosition(pos, "right") - 1;
     const prevData = this.formatList.getAt(prevIndex)!;
     return prevData.after ?? prevData.before!;
   }

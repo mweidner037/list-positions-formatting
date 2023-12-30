@@ -239,13 +239,21 @@ export class Formatting<M extends IMark> {
     } else {
       if (data.after !== undefined) return;
 
-      if (data.before !== undefined) data.after = new Map(data.before);
-      else data.after = this.copyPrevAnchor(anchor.pos);
+      if (data.before !== undefined) {
+        // Deep copy.
+        // TODO: use shallow copy at first and clone-on-write?
+        // For the keys that aren't changing.
+        // (Would it make sense to have a different formatList per key?)
+        data.after = new Map();
+        for (const [key, marks] of data.before) {
+          data.after.set(key, marks.slice());
+        }
+      } else data.after = this.copyPrevAnchor(anchor.pos);
     }
   }
 
   /**
-   * Returns a copy of the Map for the last anchor before { pos, before: true }.
+   * Returns a deep copy of the Map for the last anchor before { pos, before: true }.
    *
    * Assumes pos is present in this.formatList and not Order.MIN_POSITION.
    */

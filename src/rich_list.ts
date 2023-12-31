@@ -8,7 +8,11 @@ import {
 } from "list-positions";
 import { FormatChange } from "./formatting";
 import { diffFormats, indexOfAnchor, spanFromSlice } from "./helpers";
-import { TimestampFormatting, TimestampMark } from "./timestamp_formatting";
+import {
+  TimestampFormatting,
+  TimestampFormattingSavedState,
+  TimestampMark,
+} from "./timestamp_formatting";
 
 export type FormattedValues<T> = {
   startIndex: number;
@@ -20,7 +24,7 @@ export type FormattedValues<T> = {
 export type RichListSavedState<T> = {
   order: OrderSavedState;
   list: ListSavedState<T>;
-  formatting: TimestampMark[];
+  formatting: TimestampFormattingSavedState;
 };
 
 export class RichList<T> {

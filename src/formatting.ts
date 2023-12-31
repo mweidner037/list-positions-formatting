@@ -63,6 +63,11 @@ export type FormatChange = {
   format: Record<string, any>;
 };
 
+/**
+ * In compareSpans order (increasing). save() is same as marks().
+ */
+export type FormattingSavedState<M extends IMark> = M[];
+
 // TODO: MIN_ANCHOR, MAX_ANCHOR static props? Useful in tests, below code.
 
 export class Formatting<M extends IMark> {
@@ -538,14 +543,13 @@ export class Formatting<M extends IMark> {
     return this.orderedMarks[Symbol.iterator]();
   }
 
-  // Save format: all marks in compareMarks order (same as marks()).
-  save(): M[] {
+  save(): FormattingSavedState<M> {
     return this.orderedMarks.slice();
   }
 
   // Overwrites existing state. (To merge, call addMarks in a loop.)
   // To see result, call formatted.
-  load(savedState: M[]): void {
+  load(savedState: FormattingSavedState<M>): void {
     this.clear();
 
     // TODO: can we do this more efficiently?

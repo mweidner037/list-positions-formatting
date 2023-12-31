@@ -1,5 +1,10 @@
 import { BunchIDs, Order } from "list-positions";
-import { Anchor, FormatChange, Formatting } from "./formatting";
+import {
+  Anchor,
+  FormatChange,
+  Formatting,
+  FormattingSavedState,
+} from "./formatting";
 
 export type TimestampMark = {
   start: Anchor;
@@ -12,21 +17,17 @@ export type TimestampMark = {
   timestamp: number;
 };
 
-export function compareTimestampMarks(
-  a: TimestampMark,
-  b: TimestampMark
-): number {
-  if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
-  if (a.creatorID === b.creatorID) return 0;
-  return a.creatorID > b.creatorID ? 1 : -1;
-}
+/**
+ * TODO: copy docs from FormattingSavedState.
+ */
+export type TimestampFormattingSavedState = FormattingSavedState<TimestampMark>;
 
 export class TimestampFormatting extends Formatting<TimestampMark> {
   readonly replicaID: string;
   private timestamp = 0;
 
   constructor(order: Order, options?: { replicaID?: string }) {
-    super(order, compareTimestampMarks);
+    super(order, TimestampFormatting.compareMarks);
 
     this.replicaID = options?.replicaID ?? BunchIDs.newReplicaID();
   }
@@ -57,9 +58,11 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
     return super.addMark(mark);
   }
 
-  // TODO: TimestampFormattingSavedState type alias? Like OrderSavedState.
+  save(): TimestampFormattingSavedState {
+    return super.save();
+  }
 
-  load(savedState: TimestampMark[]): void {
+  load(savedState: TimestampFormattingSavedState): void {
     super.load(savedState);
     if (savedState.length !== 0) {
       // Use the fact that savedState is in order by timestamp.
@@ -69,4 +72,10 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
       );
     }
   }
+
+  static compareMarks = (a: TimestampMark, b: TimestampMark): number => {
+    if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+    if (a.creatorID === b.creatorID) return 0;
+    return a.creatorID > b.creatorID ? 1 : -1;
+  };
 }

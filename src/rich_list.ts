@@ -6,8 +6,8 @@ import {
   OrderSavedState,
   Position,
 } from "list-positions";
-import { Anchor, FormatChange } from "./formatting";
-import { diffFormats, sliceFromSpan, spanFromSlice } from "./helpers";
+import { FormatChange } from "./formatting";
+import { diffFormats, indexOfAnchor, spanFromSlice } from "./helpers";
 import { TimestampFormatting, TimestampMark } from "./timestamp_formatting";
 
 export type FormattedValues<T> = {
@@ -43,6 +43,7 @@ export class RichList<T> {
     order?: Order;
     // Takes precedence over order.
     list?: List<T>;
+    // For formatting - not the order.
     replicaID?: string;
     // If not provided, all are "after".
     expandRules?: (
@@ -63,14 +64,9 @@ export class RichList<T> {
     this.expandRules = options?.expandRules;
   }
 
-  static compareMarks = (a: TimestampMark, b: TimestampMark): number => {
-    if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
-    if (a.creatorID === b.creatorID) return 0;
-    return a.creatorID > b.creatorID ? 1 : -1;
-  };
-
   /**
-   *
+   * FormatChanges: you can infer from createdMarks (they'll never "lose" to
+   * an existing mark, so each applies fully, with previousValue null).
    * @param index
    * @param format null values treated as not-present.
    * @param value
@@ -82,8 +78,7 @@ export class RichList<T> {
   ): [
     pos: Position,
     createdBunch: BunchMeta | null,
-    createdMarks: TimestampMark[],
-    changes: FormatChange[]
+    createdMarks: TimestampMark[]
   ];
   insertWithFormat(
     index: number,
@@ -92,8 +87,7 @@ export class RichList<T> {
   ): [
     startPos: Position,
     createdBunch: BunchMeta | null,
-    createdMarks: TimestampMark[],
-    changes: FormatChange[]
+    createdMarks: TimestampMark[]
   ];
   insertWithFormat(
     index: number,
@@ -102,8 +96,7 @@ export class RichList<T> {
   ): [
     startPos: Position,
     createdBunch: BunchMeta | null,
-    createdMarks: TimestampMark[],
-    changes: FormatChange[]
+    createdMarks: TimestampMark[]
   ] {
     const [startPos, createdBunch] = this.list.insertAt(index, ...values);
     // Inserted positions all get the same initial format because they are not
@@ -113,9 +106,6 @@ export class RichList<T> {
       format
     );
     const createdMarks: TimestampMark[] = [];
-    // Since each mark affects a different key, these all commute.
-    // But for the record, they're stored in the order they happened.
-    const changes: FormatChange[] = [];
     for (const [key, value] of needsFormat) {
       const expand =
         this.expandRules === undefined ? "after" : this.expandRules(key, value);
@@ -126,46 +116,29 @@ export class RichList<T> {
         expand
       );
       const mark = this.formatting.newMark(start, end, key, value);
-      changes.push(...this.formatting.addMark(mark));
+      this.formatting.addMark(mark);
       this.onCreateMark?.(mark);
       createdMarks.push(mark);
     }
 
-    return [startPos, createdBunch, createdMarks, changes];
+    return [startPos, createdBunch, createdMarks];
   }
 
+  // Always creates a new mark, even if redundant.
   format(
     startIndex: number,
     endIndex: number,
     key: string,
     value: any,
-    expand: "after" | "before" | "none" | "both" = "after"
-  ): [createMark: TimestampMark, changes: FormatChange[]] {
-    if (startIndex <= endIndex) {
-      throw new Error(`startIndex <= endIndex: ${startIndex}, ${endIndex}`);
+    // Default: ask expandRules, which itself defaults to "after".
+    expand?: "after" | "before" | "none" | "both"
+  ): [createdMark: TimestampMark, changes: FormatChange[]] {
+    if (expand === undefined) {
+      expand =
+        this.expandRules === undefined ? "after" : this.expandRules(key, value);
     }
 
-    let start: Anchor;
-    if (expand === "before" || expand === "both") {
-      const pos =
-        startIndex === 0
-          ? Order.MIN_POSITION
-          : this.list.positionAt(startIndex - 1);
-      start = { pos, before: false };
-    } else {
-      start = { pos: this.list.positionAt(startIndex), before: true };
-    }
-    let end: Anchor;
-    if (expand === "after" || expand === "both") {
-      const pos =
-        endIndex === this.list.length
-          ? Order.MAX_POSITION
-          : this.list.positionAt(endIndex);
-      end = { pos, before: true };
-    } else {
-      end = { pos: this.list.positionAt(endIndex - 1), before: false };
-    }
-
+    const { start, end } = spanFromSlice(this.list, startIndex, endIndex);
     const mark = this.formatting.newMark(start, end, key, value);
     const changes = this.formatting.addMark(mark);
     this.onCreateMark?.(mark);
@@ -181,23 +154,18 @@ export class RichList<T> {
     return this.formatting.getFormat(this.list.positionAt(index));
   }
 
+  // TODO: slice args?
   formattedValues(): FormattedValues<T>[] {
-    // TODO: combine identical neighbors; opts.
-    // If nontrivial, copy opts in a Formatting.formattedSlices method.
+    const slices = this.formatting.formattedSlices(this.list);
     const values = this.list.slice();
-    return this.formatting.formattedSpans().map((span) => {
-      const { startIndex, endIndex } = sliceFromSpan(
-        this.list,
-        span.start,
-        span.end
+    for (const slice of slices) {
+      // Okay to modify slice in-place.
+      (slice as FormattedValues<T>).values = values.slice(
+        slice.startIndex,
+        slice.endIndex
       );
-      return {
-        startIndex,
-        endIndex,
-        values: values.slice(startIndex, endIndex),
-        format: span.format,
-      };
-    });
+    }
+    return slices as FormattedValues<T>[];
   }
 
   /**
@@ -209,7 +177,7 @@ export class RichList<T> {
   > {
     let index = 0;
     for (const span of this.formatting.formattedSpans()) {
-      const { endIndex } = sliceFromSpan(this.list, span.start, span.end);
+      const endIndex = indexOfAnchor(this.list, span.end);
       for (; index < endIndex; index++) {
         const pos = this.list.positionAt(index);
         yield [pos, this.list.get(pos)!, span.format];

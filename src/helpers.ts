@@ -1,5 +1,5 @@
 import { LexList, List, Order, Outline } from "list-positions";
-import { Anchor } from "./formatting";
+import type { Anchor } from "./formatting";
 
 export function spanFromSlice(
   list: List<unknown> | LexList<unknown> | Outline,
@@ -7,8 +7,8 @@ export function spanFromSlice(
   endIndex: number,
   expand: "after" | "before" | "both" | "none" = "after"
 ): { start: Anchor; end: Anchor } {
-  if (startIndex <= endIndex) {
-    throw new Error(`startIndex <= endIndex: ${startIndex}, ${endIndex}`);
+  if (startIndex >= endIndex) {
+    throw new Error(`startIndex >= endIndex: ${startIndex}, ${endIndex}`);
   }
 
   const posList = list instanceof LexList ? list.list : list;
@@ -38,25 +38,40 @@ export function spanFromSlice(
   return { start, end };
 }
 
+// Note: might return trivial slice (same start and end).
+// But spanFromSlice won't accept that. TODO: accept it?
 export function sliceFromSpan(
   list: List<unknown> | LexList<unknown> | Outline,
   start: Anchor,
   end: Anchor
 ): { startIndex: number; endIndex: number } {
+  return {
+    startIndex: indexOfAnchor(list, start),
+    endIndex: indexOfAnchor(list, end),
+  };
+}
+
+/**
+ * Returns the next index after anchor in list,
+ * or `list.length` if anchor is after all present positions.
+ *
+ * You can use this function to convert either endpoint of a span
+ * to the corresponding slice endpoint (see sliceFromSpan).
+ */
+export function indexOfAnchor(
+  list: List<unknown> | LexList<unknown> | Outline,
+  anchor: Anchor
+): number {
   const posList = list instanceof LexList ? list.list : list;
-  const startIndex = start.before
-    ? posList.indexOfPosition(start.pos, "right")
-    : posList.indexOfPosition(start.pos, "left") + 1;
-  const endIndex = end.before
-    ? posList.indexOfPosition(end.pos, "right")
-    : posList.indexOfPosition(start.pos, "left") + 1;
-  return { startIndex, endIndex };
+  return anchor.before
+    ? posList.indexOfPosition(anchor.pos, "right")
+    : posList.indexOfPosition(anchor.pos, "left") + 1;
 }
 
 /**
  * Returns changes (including null for deletions) to turn current into target.
  *
- * null values are ignored (treated as not present). TODO
+ * null values are ignored (treated as not present).
  */
 export function diffFormats(
   current: Record<string, any>,

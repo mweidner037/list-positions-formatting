@@ -1,4 +1,12 @@
-import { BunchIDs, List, Order, Position } from "list-positions";
+import {
+  BunchIDs,
+  LexList,
+  List,
+  Order,
+  Outline,
+  Position,
+} from "list-positions";
+import { indexOfAnchor } from "./helpers";
 
 export type Anchor = {
   /**
@@ -37,6 +45,12 @@ export type FormattedSpan = {
   format: Record<string, any>;
 };
 
+export type FormattedSlice = {
+  startIndex: number;
+  endIndex: number;
+  format: Record<string, any>;
+};
+
 export type FormatChange = {
   start: Anchor;
   end: Anchor;
@@ -48,6 +62,8 @@ export type FormatChange = {
   // The complete new format (excluding nulls).
   format: Record<string, any>;
 };
+
+// TODO: MIN_ANCHOR, MAX_ANCHOR static props? Useful in tests, below code.
 
 export class Formatting<M extends IMark> {
   /**
@@ -98,7 +114,7 @@ export class Formatting<M extends IMark> {
       // Common case: mark is "recent" - among the last 10 marks.
       // Search those linearly in reverse.
       for (let i = list.length - 1; i >= minus10; i--) {
-        if (this.compareMarks(mark, list[1]) > 0) return i + 1;
+        if (this.compareMarks(mark, list[i]) > 0) return i + 1;
       }
       // If we get here, the mark is == minus10. TODO: check.
       return minus10;
@@ -160,7 +176,7 @@ export class Formatting<M extends IMark> {
     // later.
 
     const sliceBuilder = new SpanBuilder<FormatChangeInternal>(
-      formatChangeEquals
+      equalsFormatChangeInternal
     );
 
     const startIndex = this.formatList.indexOfPosition(mark.start.pos);
@@ -220,10 +236,6 @@ export class Formatting<M extends IMark> {
    * copying the correct values from the previous FormatData.
    */
   private createData(anchor: Anchor): void {
-    // We never need to create start or end: start is created in the
-    // constructor, and end is not stored.
-    if (anchor.pos === null) return;
-
     let data = this.formatList.get(anchor.pos);
     if (data === undefined) {
       data = {};
@@ -237,13 +249,21 @@ export class Formatting<M extends IMark> {
     } else {
       if (data.after !== undefined) return;
 
-      if (data.before !== undefined) data.after = new Map(data.before);
-      else data.after = this.copyPrevAnchor(anchor.pos);
+      if (data.before !== undefined) {
+        // Deep copy.
+        // TODO: use shallow copy at first and clone-on-write?
+        // For the keys that aren't changing.
+        // (Would it make sense to have a different formatList per key?)
+        data.after = new Map();
+        for (const [key, marks] of data.before) {
+          data.after.set(key, marks.slice());
+        }
+      } else data.after = this.copyPrevAnchor(anchor.pos);
     }
   }
 
   /**
-   * Returns a copy of the Map for the last anchor before { pos, before: true }.
+   * Returns a deep copy of the Map for the last anchor before { pos, before: true }.
    *
    * Assumes pos is present in this.formatList and not Order.MIN_POSITION.
    */
@@ -278,7 +298,7 @@ export class Formatting<M extends IMark> {
     if (index === marks.length - 1) {
       // New mark wins over old. Record the change.
       sliceBuilder.add(anchor, {
-        otherValue: marks.length === 1 ? null : marks[marks.length - 2],
+        otherValue: marks.length === 1 ? null : marks[marks.length - 2].value,
         format: dataToRecord(anchorData),
       });
     } else sliceBuilder.add(anchor, null);
@@ -309,7 +329,7 @@ export class Formatting<M extends IMark> {
     // later.
 
     const sliceBuilder = new SpanBuilder<FormatChangeInternal>(
-      formatChangeEquals
+      equalsFormatChangeInternal
     );
 
     // Since the mark currently exists, its start and end anchors must have data.
@@ -375,10 +395,15 @@ export class Formatting<M extends IMark> {
     // This won't break the asymptotics b/c splice will be equally slow.
     const index = marks.lastIndexOf(mark);
     marks.splice(index, 1);
+    // Preserve the invariant that anchorData arrays are never empty.
+    if (marks.length === 0) {
+      anchorData.delete(mark.key);
+    }
+
     if (index === marks.length) {
       // Deleted mark used to win. Record the change.
       sliceBuilder.add(anchor, {
-        otherValue: marks.length === 0 ? null : marks[marks.length - 1],
+        otherValue: marks.length === 0 ? null : marks[marks.length - 1].value,
         format: dataToRecord(anchorData),
       });
     } else sliceBuilder.add(anchor, null);
@@ -406,7 +431,7 @@ export class Formatting<M extends IMark> {
   getActiveMarks(pos: Position): Map<string, M> {
     const active = new Map<string, M>();
     for (const [key, marks] of this.getFormatData(pos)) {
-      if (marks.length !== 0) active.set(key, marks[marks.length - 1]);
+      active.set(key, marks[marks.length - 1]);
     }
     return active;
   }
@@ -417,11 +442,10 @@ export class Formatting<M extends IMark> {
    * @throws If pos is min or max Position.
    */
   getAllMarks(pos: Position): Map<string, M[]> {
-    // Defensive copy.
-    // Also, filter out possible empty values (due to deleteMark calls).
+    // Defensive deep copy.
     const copy = new Map<string, M[]>();
     for (const [key, marks] of this.getFormatData(pos)) {
-      if (marks.length !== 0) copy.set(key, marks);
+      copy.set(key, marks.slice());
     }
     return copy;
   }
@@ -440,8 +464,9 @@ export class Formatting<M extends IMark> {
     const posData = this.formatList.get(pos);
     if (posData?.before !== undefined) return posData.before;
 
-    // Since MIN_POSITION is always set, prevIndex is never -1.
-    const prevIndex = this.formatList.indexOfPosition(pos, "left");
+    // Since MIN_POSITION is always present and less than pos,
+    // prevIndex is never -1.
+    const prevIndex = this.formatList.indexOfPosition(pos, "right") - 1;
     const prevData = this.formatList.getAt(prevIndex)!;
     return prevData.after ?? prevData.before!;
   }
@@ -453,7 +478,7 @@ export class Formatting<M extends IMark> {
    * In order; starts with open minPos, ends with open maxPos.
    */
   formattedSpans(): FormattedSpan[] {
-    const sliceBuilder = new SpanBuilder<Record<string, unknown>>(recordEquals);
+    const sliceBuilder = new SpanBuilder<Record<string, unknown>>(equalsRecord);
     // formatList always contains the starting anchor, so this will cover the
     // whole beginning.
     for (const [pos, data] of this.formatList.entries()) {
@@ -476,6 +501,32 @@ export class Formatting<M extends IMark> {
       end: slice.end,
       format: slice.data,
     }));
+  }
+
+  // TODO: slice args?
+  formattedSlices(
+    list: List<unknown> | LexList<unknown> | Outline
+  ): FormattedSlice[] {
+    // TODO: Stop formattedSpans early if we reach the end of list, using slice args.
+    // Or at least break once endIndex == length, to save on indexOfAnchor calls.
+    const slices: FormattedSlice[] = [];
+    let prevSlice: FormattedSlice | null = null;
+    for (const span of this.formattedSpans()) {
+      const startIndex: number = prevSlice?.endIndex ?? 0;
+      const endIndex = indexOfAnchor(list, span.end);
+      if (endIndex !== startIndex) {
+        if (prevSlice !== null && equalsRecord(span.format, prevSlice.format)) {
+          // Combine sequential slices with the same format.
+          prevSlice.endIndex = endIndex;
+        } else {
+          const slice = { startIndex, endIndex, format: span.format };
+          slices.push(slice);
+          prevSlice = slice;
+        }
+      }
+      // Else skip - span maps to empty slice.
+    }
+    return slices;
   }
 
   /**
@@ -508,6 +559,8 @@ export class Formatting<M extends IMark> {
  *
  * Note: after deletions, both fields may be empty, but they will never
  * both be undefined.
+ *
+ * Marks arrays are never empty.
  */
 interface FormatData<S extends IMark> {
   /**
@@ -604,7 +657,7 @@ class SpanBuilder<D> {
   }
 }
 
-function recordEquals(
+function equalsRecord(
   a: Record<string, unknown>,
   b: Record<string, unknown>
 ): boolean {
@@ -626,10 +679,10 @@ type FormatChangeInternal = {
   format: Record<string, unknown>;
 } | null;
 
-function formatChangeEquals(
+function equalsFormatChangeInternal(
   a: FormatChangeInternal,
   b: FormatChangeInternal
 ): boolean {
   if (a === null || b === null) return a === b;
-  return a.otherValue === b.otherValue && recordEquals(a.format, b.format);
+  return a.otherValue === b.otherValue && equalsRecord(a.format, b.format);
 }

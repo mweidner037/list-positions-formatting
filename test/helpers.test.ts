@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import { List, Order, Position } from "list-positions";
+import { BunchIDs, List, Order, Position } from "list-positions";
 import { describe, test } from "mocha";
 import seedrandom from "seedrandom";
 import { diffFormats, sliceFromSpan, spanFromSlice } from "../src";
@@ -18,7 +18,11 @@ describe("helpers", () => {
     let partList!: List<string>;
 
     beforeEach(() => {
-      list = new List();
+      list = new List(
+        new Order({
+          newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+        })
+      );
       const startPos = list.insertAt(0, ..."0123456789")[0];
       poss = Order.startPosToArray(startPos, 10);
       partList = new List(list.order);

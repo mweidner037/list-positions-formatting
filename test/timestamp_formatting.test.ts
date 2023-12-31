@@ -17,7 +17,11 @@ describe("TimestampFormatting", () => {
     let poss!: Position[];
 
     beforeEach(() => {
-      list = new List();
+      list = new List(
+        new Order({
+          newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+        })
+      );
       const startPos = list.insertAt(0, ..."0123456789")[0];
       poss = Order.startPosToArray(startPos, 10);
       formatting = new TimestampFormatting(list.order, {
@@ -1849,11 +1853,17 @@ describe("TimestampFormatting", () => {
     let poss!: Position[];
 
     beforeEach(() => {
-      aliceList = new List();
+      aliceList = new List(
+        new Order({
+          newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+        }));
       const startPos = aliceList.insertAt(0, ..."0123456789")[0];
       poss = Order.startPosToArray(startPos, 10);
 
-      bobList = new List();
+      bobList = new List(
+        new Order({
+          newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+        }));
       bobList.order.load(aliceList.order.save());
       bobList.load(aliceList.save());
 

@@ -43,6 +43,7 @@ export class RichList<T> {
     order?: Order;
     // Takes precedence over order.
     list?: List<T>;
+    // For formatting - not the order.
     replicaID?: string;
     // If not provided, all are "after".
     expandRules?: (
@@ -64,7 +65,8 @@ export class RichList<T> {
   }
 
   /**
-   *
+   * FormatChanges: you can infer from createdMarks (they'll never "lose" to
+   * an existing mark, so each applies fully, with previousValue null).
    * @param index
    * @param format null values treated as not-present.
    * @param value
@@ -76,8 +78,7 @@ export class RichList<T> {
   ): [
     pos: Position,
     createdBunch: BunchMeta | null,
-    createdMarks: TimestampMark[],
-    changes: FormatChange[]
+    createdMarks: TimestampMark[]
   ];
   insertWithFormat(
     index: number,
@@ -86,8 +87,7 @@ export class RichList<T> {
   ): [
     startPos: Position,
     createdBunch: BunchMeta | null,
-    createdMarks: TimestampMark[],
-    changes: FormatChange[]
+    createdMarks: TimestampMark[]
   ];
   insertWithFormat(
     index: number,
@@ -96,8 +96,7 @@ export class RichList<T> {
   ): [
     startPos: Position,
     createdBunch: BunchMeta | null,
-    createdMarks: TimestampMark[],
-    changes: FormatChange[]
+    createdMarks: TimestampMark[]
   ] {
     const [startPos, createdBunch] = this.list.insertAt(index, ...values);
     // Inserted positions all get the same initial format because they are not
@@ -107,9 +106,6 @@ export class RichList<T> {
       format
     );
     const createdMarks: TimestampMark[] = [];
-    // Since each mark affects a different key, these all commute.
-    // But for the record, they're stored in the order they happened.
-    const changes: FormatChange[] = [];
     for (const [key, value] of needsFormat) {
       const expand =
         this.expandRules === undefined ? "after" : this.expandRules(key, value);
@@ -120,12 +116,12 @@ export class RichList<T> {
         expand
       );
       const mark = this.formatting.newMark(start, end, key, value);
-      changes.push(...this.formatting.addMark(mark));
+      this.formatting.addMark(mark);
       this.onCreateMark?.(mark);
       createdMarks.push(mark);
     }
 
-    return [startPos, createdBunch, createdMarks, changes];
+    return [startPos, createdBunch, createdMarks];
   }
 
   format(

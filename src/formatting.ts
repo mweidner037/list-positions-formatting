@@ -507,23 +507,26 @@ export class Formatting<M extends IMark> {
   formattedSlices(
     list: List<unknown> | LexList<unknown> | Outline
   ): FormattedSlice[] {
-    // TODO: combine neighbors with equal formats.
     // TODO: Stop formattedSpans early if we reach the end of list, using slice args.
     // Or at least break once endIndex == length, to save on indexOfAnchor calls.
-    const ans: FormattedSlice[] = [];
-    let startIndex = 0;
+    const slices: FormattedSlice[] = [];
+    let prevSlice: FormattedSlice | null = null;
     for (const span of this.formattedSpans()) {
+      const startIndex: number = prevSlice?.endIndex ?? 0;
       const endIndex = indexOfAnchor(list, span.end);
       if (endIndex !== startIndex) {
-        ans.push({
-          startIndex,
-          endIndex,
-          format: span.format,
-        });
-        startIndex = endIndex;
+        if (prevSlice !== null && equalsRecord(span.format, prevSlice.format)) {
+          // Combine sequential slices with the same format.
+          prevSlice.endIndex = endIndex;
+        } else {
+          const slice = { startIndex, endIndex, format: span.format };
+          slices.push(slice);
+          prevSlice = slice;
+        }
       }
+      // Else skip - span maps to empty slice.
     }
-    return ans;
+    return slices;
   }
 
   /**

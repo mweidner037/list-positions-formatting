@@ -1,6 +1,6 @@
 # list-formatting
 
-Inline formatting for a list, e.g., collaborative rich-text
+Inline formatting for a list, e.g., collaborative rich text
 
 ## About
 

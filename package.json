@@ -1,7 +1,7 @@
 {
   "name": "list-formatting",
   "version": "0.1.0",
-  "description": "Inline formatting for a list, e.g., collaborative rich-text",
+  "description": "Inline formatting for a list, e.g., collaborative rich text",
   "author": "Matthew Weidner",
   "license": "Apache-2.0",
   "bugs": {

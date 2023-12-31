@@ -60,9 +60,34 @@ export type RichListSavedState<T> = {
   formatting: TimestampFormattingSavedState;
 };
 
+/**
+ * TODO
+ *
+ * For ops that only involve list or formatting, do it directly on them.
+ */
 export class RichList<T> {
+  /**
+   * The Order that manages this RichList's Positions and their metadata.
+   *
+   * See list-positions's [List, Position, and Order](https://github.com/mweidner037/list-positions#list-position-and-order).
+   */
   readonly order: Order;
+  /**
+   * The list of values.
+   *
+   * You may read and write this List directly. RichList is merely a wrapper
+   * that provides some convenience methods - in particular,
+   * `insertWithFormat`, which wraps `list.insertAt` to ensure
+   * a given format.
+   */
   readonly list: List<T>;
+  /**
+   * The list's formatting.
+   *
+   * You may read and write this TimestampFormatting directly. RichList is
+   * merely a wrapper that provides some convenience methods - in particular,
+   * `format` and `formattedValues`, which handle index-Anchor conversions for you.
+   */
   readonly formatting: TimestampFormatting;
 
   private readonly expandRules?: (
@@ -71,24 +96,47 @@ export class RichList<T> {
   ) => "after" | "before" | "none" | "both";
 
   /**
-   * Only called by this class's methods that create & return a Mark.
-   * Not called for formatting.newMark or formatting.addMark.
+   * Event handler that you can set to be notified when `this.format` or
+   * `this.insertWithFormat` creates a mark.
+   *
+   * It is called with the same `createdMark(s)` that are returned by those
+   * methods.
+   *
+   * __Note:__ This event handler is _not_ called for marks that are
+   * created directly on `this.formatting` using its newMark or addMark
+   * methods.
    */
   onCreateMark: ((createdMark: TimestampMark) => void) | undefined = undefined;
 
+  /**
+   * Constructs a RichList.
+   *
+   * @param options.expandRules The [expand](TODO: readme link) behavior
+   * to use for new marks created by `insertWithFormat` and `format`.
+   * It inputs the mark's key and value. Default: Always returns "after".
+   * @param options.order The Order to use for `this.order`. Both `this.list`
+   * and `this.formatting` share the order. If neither `options.order` nor
+   * `options.list` are provided, a `new Order()` is used.
+   * Exclusive with `options.list`.
+   * @param options.list The List to use for `this.list`. If not provided,
+   * a `new List(options?.order)` is used. Exclusive with `options.order`.
+   * @param options.replicaID The replica ID for `this.formatting`
+   * (_not_ `this.order`). All of our created marks will use it as their
+   * `creatorID`. Default: list-positions's `BunchIDs.newReplicaID()`.
+   */
   constructor(options?: {
-    order?: Order;
-    // Takes precedence over order.
-    list?: List<T>;
-    // For formatting - not the order.
-    replicaID?: string;
-    // If not provided, all are "after".
     expandRules?: (
       key: string,
       value: any
     ) => "after" | "before" | "none" | "both";
+    order?: Order;
+    list?: List<T>;
+    replicaID?: string;
   }) {
     if (options?.list !== undefined) {
+      if (options.order !== undefined) {
+        throw new Error("list and order options are exclusive");
+      }
       this.list = options.list;
       this.order = this.list.order;
     } else {
@@ -102,11 +150,13 @@ export class RichList<T> {
   }
 
   /**
-   * FormatChanges: you can infer from createdMarks (they'll never "lose" to
-   * an existing mark, so each applies fully, with previousValue null).
-   * @param index
-   * @param format null values treated as not-present.
-   * @param value
+   * Inserts the given value at `index` using `this.list.insertAt`,
+   * and applies new formatting marks
+   * as needed so that the value has the exact given format.
+   *
+   * @returns [insertion Position,
+   * [created bunch's](https://github.com/mweidner037/list-positions#createdBunch)
+   * BunchMeta (or null), created formatting marks]
    */
   insertWithFormat(
     index: number,
@@ -117,6 +167,16 @@ export class RichList<T> {
     createdBunch: BunchMeta | null,
     createdMarks: TimestampMark[]
   ];
+  /**
+   * Inserts the given values at `index` using `this.list.insertAt`,
+   * and applies new formatting marks
+   * as needed so that the values have the exact given format.
+   *
+   * @returns [starting Position,
+   * [created bunch's](https://github.com/mweidner037/list-positions#createdBunch)
+   * BunchMeta (or null), created formatting marks]
+   * @throws If no values are provided.
+   */
   insertWithFormat(
     index: number,
     format: Record<string, any>,
@@ -158,16 +218,27 @@ export class RichList<T> {
       createdMarks.push(mark);
     }
 
+    // We don't return the FormatChanges because you can infer them from
+    // createdMarks: the created marks will never lose to an existing mark,
+    // so each changes its whole span, with previousValue TODO: null or might be an existing value.
     return [startPos, createdBunch, createdMarks];
   }
 
-  // Always creates a new mark, even if redundant.
+  /**
+   * Formats the slice `this.list.slice(startIndex, endIndex)`,
+   * setting the given format key to value.
+   *
+   * This method always creates a new mark, even if it is redundant.
+   *
+   * @param expand The new mark's [expand](TODO: readme link) behavior.
+   * If not provided, defaults to the constructor's `options.expandRules`.
+   * @returns [created mark, non-redundant format changes]
+   */
   format(
     startIndex: number,
     endIndex: number,
     key: string,
     value: any,
-    // Default: ask expandRules, which itself defaults to "after".
     expand?: "after" | "before" | "none" | "both"
   ): [createdMark: TimestampMark, changes: FormatChange[]] {
     if (expand === undefined) {
@@ -182,16 +253,32 @@ export class RichList<T> {
     return [mark, changes];
   }
 
+  /**
+   * Clears `this.list` and `this.formatting`, so that this RichList
+   * has no values and no marks.
+   *
+   * `this.order` is unaffected (retains all metadata).
+   */
   clear() {
     this.list.clear();
     this.formatting.clear();
   }
 
+  /**
+   * Returns the current format at index.
+   */
   getFormatAt(index: number): Record<string, any> {
     return this.formatting.getFormat(this.list.positionAt(index));
   }
 
   // TODO: slice args?
+  /**
+   * Returns an efficient representation of this RichList's values and their
+   * formatting.
+   *
+   * Specifically, returns an array of FormattedValues objects in list order.
+   * Each object describes a slice of values with the same format.
+   */
   formattedValues(): FormattedValues<T>[] {
     const slices = this.formatting.formattedSlices(this.list);
     const values = this.list.slice();
@@ -206,8 +293,11 @@ export class RichList<T> {
   }
 
   /**
-   * Long form of formattedValues that emits each value individually, like
-   * list.entries().
+   * Returns an iterator of [position, value, format] tuples for every
+   * value in the list, in list order.
+   *
+   * Typically, you should instead use `formattedValues()`, which returns a
+   * more efficient representation of the formatted values.
    */
   *entries(): IterableIterator<
     [pos: Position, value: T, format: Record<string, any>]
@@ -254,6 +344,4 @@ export class RichList<T> {
     this.list.load(savedState.list);
     this.formatting.load(savedState.formatting);
   }
-
-  // Other ops only involve one of (list, formatting); do it directly on them?
 }

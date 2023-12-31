@@ -8,6 +8,7 @@ import { Anchor, Anchors } from "./anchor";
  * Returns a span `{ start: Anchor, end: Anchor }` that covers precisely
  * the given slice of list. The startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
  *
+ * TODO: move expand desc to readme and link here?
  * The span covers all positions from
  * `list.positionAt(startIndex)` to `list.positionAt(endIndex - 1)` inclusive,
  * including positions that are not currently present in list.

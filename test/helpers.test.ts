@@ -6,6 +6,7 @@ import { diffFormats, sliceFromSpan, spanFromSlice } from "../src";
 
 describe("helpers", () => {
   let rng!: seedrandom.prng;
+
   beforeEach(() => {
     rng = seedrandom("42");
   });

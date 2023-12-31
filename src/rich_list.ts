@@ -6,8 +6,9 @@ import {
   OrderSavedState,
   Position,
 } from "list-positions";
+import { Anchors } from "./anchors";
 import { FormatChange } from "./formatting";
-import { diffFormats, indexOfAnchor, spanFromSlice } from "./helpers";
+import { diffFormats, spanFromSlice } from "./helpers";
 import {
   TimestampFormatting,
   TimestampFormattingSavedState,
@@ -181,7 +182,7 @@ export class RichList<T> {
   > {
     let index = 0;
     for (const span of this.formatting.formattedSpans()) {
-      const endIndex = indexOfAnchor(this.list, span.end);
+      const endIndex = Anchors.indexOfAnchor(this.list, span.end);
       for (; index < endIndex; index++) {
         const pos = this.list.positionAt(index);
         yield [pos, this.list.get(pos)!, span.format];

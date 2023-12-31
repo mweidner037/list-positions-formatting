@@ -1,4 +1,5 @@
 import { LexList, List, Order, Outline } from "list-positions";
+import { Anchors } from "./anchors";
 import type { Anchor } from "./formatting";
 
 export function spanFromSlice(
@@ -46,26 +47,9 @@ export function sliceFromSpan(
   end: Anchor
 ): { startIndex: number; endIndex: number } {
   return {
-    startIndex: indexOfAnchor(list, start),
-    endIndex: indexOfAnchor(list, end),
+    startIndex: Anchors.indexOfAnchor(list, start),
+    endIndex: Anchors.indexOfAnchor(list, end),
   };
-}
-
-/**
- * Returns the next index after anchor in list,
- * or `list.length` if anchor is after all present positions.
- *
- * You can use this function to convert either endpoint of a span
- * to the corresponding slice endpoint (see sliceFromSpan).
- */
-export function indexOfAnchor(
-  list: List<unknown> | LexList<unknown> | Outline,
-  anchor: Anchor
-): number {
-  const posList = list instanceof LexList ? list.list : list;
-  return anchor.before
-    ? posList.indexOfPosition(anchor.pos, "right")
-    : posList.indexOfPosition(anchor.pos, "left") + 1;
 }
 
 /**

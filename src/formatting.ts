@@ -6,7 +6,7 @@ import {
   Outline,
   Position,
 } from "list-positions";
-import { indexOfAnchor } from "./helpers";
+import { Anchors } from "./anchors";
 
 export type Anchor = {
   /**
@@ -19,10 +19,6 @@ export type Anchor = {
    */
   before: boolean;
 };
-
-export function equalsAnchor(a: Anchor, b: Anchor): boolean {
-  return a.before === b.before && Order.equalsPosition(a.pos, b.pos);
-}
 
 /**
  * Missing metadata needed for comparison,
@@ -67,8 +63,6 @@ export type FormatChange = {
  * In compareSpans order (increasing). save() is same as marks().
  */
 export type FormattingSavedState<M extends IMark> = M[];
-
-// TODO: MIN_ANCHOR, MAX_ANCHOR static props? Useful in tests, below code.
 
 export class Formatting<M extends IMark> {
   /**
@@ -518,7 +512,7 @@ export class Formatting<M extends IMark> {
     let prevSlice: FormattedSlice | null = null;
     for (const span of this.formattedSpans()) {
       const startIndex: number = prevSlice?.endIndex ?? 0;
-      const endIndex = indexOfAnchor(list, span.end);
+      const endIndex = Anchors.indexOfAnchor(list, span.end);
       if (endIndex !== startIndex) {
         if (prevSlice !== null && equalsRecord(span.format, prevSlice.format)) {
           // Combine sequential slices with the same format.
@@ -646,7 +640,7 @@ class SpanBuilder<D> {
   }
 
   private record(start: Anchor, end: Anchor, data: D): void {
-    if (equalsAnchor(start, end)) return;
+    if (Anchors.equals(start, end)) return;
 
     if (this.slices.length !== 0) {
       const prevSlice = this.slices[this.slices.length - 1];

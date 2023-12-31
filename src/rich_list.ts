@@ -6,7 +6,7 @@ import {
   OrderSavedState,
   Position,
 } from "list-positions";
-import { Anchor, FormatChange } from "./formatting";
+import { FormatChange } from "./formatting";
 import { diffFormats, indexOfAnchor, spanFromSlice } from "./helpers";
 import { TimestampFormatting, TimestampMark } from "./timestamp_formatting";
 
@@ -124,38 +124,21 @@ export class RichList<T> {
     return [startPos, createdBunch, createdMarks];
   }
 
+  // Always creates a new mark, even if redundant.
   format(
     startIndex: number,
     endIndex: number,
     key: string,
     value: any,
-    expand: "after" | "before" | "none" | "both" = "after"
-  ): [createMark: TimestampMark, changes: FormatChange[]] {
-    if (startIndex <= endIndex) {
-      throw new Error(`startIndex <= endIndex: ${startIndex}, ${endIndex}`);
+    // Default: ask expandRules, which itself defaults to "after".
+    expand?: "after" | "before" | "none" | "both"
+  ): [createdMark: TimestampMark, changes: FormatChange[]] {
+    if (expand === undefined) {
+      expand =
+        this.expandRules === undefined ? "after" : this.expandRules(key, value);
     }
 
-    let start: Anchor;
-    if (expand === "before" || expand === "both") {
-      const pos =
-        startIndex === 0
-          ? Order.MIN_POSITION
-          : this.list.positionAt(startIndex - 1);
-      start = { pos, before: false };
-    } else {
-      start = { pos: this.list.positionAt(startIndex), before: true };
-    }
-    let end: Anchor;
-    if (expand === "after" || expand === "both") {
-      const pos =
-        endIndex === this.list.length
-          ? Order.MAX_POSITION
-          : this.list.positionAt(endIndex);
-      end = { pos, before: true };
-    } else {
-      end = { pos: this.list.positionAt(endIndex - 1), before: false };
-    }
-
+    const { start, end } = spanFromSlice(this.list, startIndex, endIndex);
     const mark = this.formatting.newMark(start, end, key, value);
     const changes = this.formatting.addMark(mark);
     this.onCreateMark?.(mark);

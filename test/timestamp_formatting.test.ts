@@ -1856,14 +1856,16 @@ describe("TimestampFormatting", () => {
       aliceList = new List(
         new Order({
           newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
-        }));
+        })
+      );
       const startPos = aliceList.insertAt(0, ..."0123456789")[0];
       poss = Order.startPosToArray(startPos, 10);
 
       bobList = new List(
         new Order({
           newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
-        }));
+        })
+      );
       bobList.order.load(aliceList.order.save());
       bobList.load(aliceList.save());
 

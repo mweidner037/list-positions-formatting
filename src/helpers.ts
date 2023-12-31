@@ -7,8 +7,8 @@ export function spanFromSlice(
   endIndex: number,
   expand: "after" | "before" | "both" | "none" = "after"
 ): { start: Anchor; end: Anchor } {
-  if (startIndex <= endIndex) {
-    throw new Error(`startIndex <= endIndex: ${startIndex}, ${endIndex}`);
+  if (startIndex >= endIndex) {
+    throw new Error(`startIndex >= endIndex: ${startIndex}, ${endIndex}`);
   }
 
   const posList = list instanceof LexList ? list.list : list;
@@ -38,6 +38,8 @@ export function spanFromSlice(
   return { start, end };
 }
 
+// Note: might return trivial slice (same start and end).
+// But spanFromSlice won't accept that. TODO: accept it?
 export function sliceFromSpan(
   list: List<unknown> | LexList<unknown> | Outline,
   start: Anchor,
@@ -49,14 +51,14 @@ export function sliceFromSpan(
     : posList.indexOfPosition(start.pos, "left") + 1;
   const endIndex = end.before
     ? posList.indexOfPosition(end.pos, "right")
-    : posList.indexOfPosition(start.pos, "left") + 1;
+    : posList.indexOfPosition(end.pos, "left") + 1;
   return { startIndex, endIndex };
 }
 
 /**
  * Returns changes (including null for deletions) to turn current into target.
  *
- * null values are ignored (treated as not present). TODO
+ * null values are ignored (treated as not present).
  */
 export function diffFormats(
   current: Record<string, any>,

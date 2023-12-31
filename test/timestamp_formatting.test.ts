@@ -541,7 +541,7 @@ describe("TimestampFormatting", () => {
           for (const before3 of [true, false]) {
             formatting.clear();
             const mark1 = formatting.newMark(
-              // Booleans are flipped relative to "same start pos 2".
+              // Booleans are flipped relative to "same start pos 1".
               { pos: poss[3], before: true },
               { pos: poss[6], before: before1 },
               "url",
@@ -662,7 +662,7 @@ describe("TimestampFormatting", () => {
           formatting.clear();
           const mark1 = formatting.newMark(
             { pos: Order.MIN_POSITION, before: false },
-            // Booleans are flipped relative to "same start pos 1".
+            // Booleans are flipped relative to "same end pos 1".
             { pos: poss[6], before: true },
             "url",
             "www1"
@@ -1124,6 +1124,626 @@ describe("TimestampFormatting", () => {
             format: {},
           },
         ]);
+      });
+    });
+
+    describe("multiple keys", () => {
+      test("overlapping", () => {
+        for (const before1 of [true, false]) {
+          for (const before2 of [true, false]) {
+            for (const before3 of [true, false]) {
+              formatting.clear();
+              const mark1 = formatting.newMark(
+                { pos: Order.MIN_POSITION, before: false },
+                { pos: poss[6], before: before1 },
+                "url",
+                "www1"
+              );
+              formatting.addMark(mark1);
+              const mark2 = formatting.newMark(
+                { pos: poss[3], before: before2 },
+                { pos: poss[9], before: before3 },
+                "bold",
+                true
+              );
+
+              const changes = formatting.addMark(mark2);
+              assert.deepStrictEqual(formatting.formattedSpans(), [
+                {
+                  start: { pos: Order.MIN_POSITION, before: false },
+                  end: { pos: poss[3], before: before2 },
+                  format: { url: "www1" },
+                },
+                {
+                  start: { pos: poss[3], before: before2 },
+                  end: { pos: poss[6], before: before1 },
+                  format: { url: "www1", bold: true },
+                },
+                {
+                  start: { pos: poss[6], before: before1 },
+                  end: { pos: poss[9], before: before3 },
+                  format: { bold: true },
+                },
+                {
+                  start: { pos: poss[9], before: before3 },
+                  end: { pos: Order.MAX_POSITION, before: true },
+                  format: {},
+                },
+              ]);
+              assert.deepStrictEqual(changes, [
+                {
+                  start: { pos: poss[3], before: before2 },
+                  end: { pos: poss[6], before: before1 },
+                  key: "bold",
+                  value: true,
+                  previousValue: null,
+                  format: { url: "www1", bold: true },
+                },
+                {
+                  start: { pos: poss[6], before: before1 },
+                  end: { pos: poss[9], before: before3 },
+                  key: "bold",
+                  value: true,
+                  previousValue: null,
+                  format: { bold: true },
+                },
+              ]);
+              checkMisc();
+            }
+          }
+        }
+      });
+
+      // Test spans that touch the same anchors.
+      test("same start anchor", () => {
+        for (const before1 of [true, false]) {
+          for (const before2 of [true, false]) {
+            for (const before3 of [true, false]) {
+              formatting.clear();
+              const mark1 = formatting.newMark(
+                { pos: poss[3], before: before2 },
+                { pos: poss[6], before: before1 },
+                "url",
+                "www1"
+              );
+              formatting.addMark(mark1);
+              const mark2 = formatting.newMark(
+                { pos: poss[3], before: before2 },
+                { pos: poss[9], before: before3 },
+                "bold",
+                true
+              );
+
+              const changes = formatting.addMark(mark2);
+              assert.deepStrictEqual(formatting.formattedSpans(), [
+                {
+                  start: { pos: Order.MIN_POSITION, before: false },
+                  end: { pos: poss[3], before: before2 },
+                  format: {},
+                },
+                {
+                  start: { pos: poss[3], before: before2 },
+                  end: { pos: poss[6], before: before1 },
+                  format: { url: "www1", bold: true },
+                },
+                {
+                  start: { pos: poss[6], before: before1 },
+                  end: { pos: poss[9], before: before3 },
+                  format: { bold: true },
+                },
+                {
+                  start: { pos: poss[9], before: before3 },
+                  end: { pos: Order.MAX_POSITION, before: true },
+                  format: {},
+                },
+              ]);
+              assert.deepStrictEqual(changes, [
+                {
+                  start: { pos: poss[3], before: before2 },
+                  end: { pos: poss[6], before: before1 },
+                  key: "bold",
+                  value: true,
+                  previousValue: null,
+                  format: { url: "www1", bold: true },
+                },
+                {
+                  start: { pos: poss[6], before: before1 },
+                  end: { pos: poss[9], before: before3 },
+                  key: "bold",
+                  value: true,
+                  previousValue: null,
+                  format: { bold: true },
+                },
+              ]);
+              checkMisc();
+            }
+          }
+        }
+      });
+
+      test("same end anchor", () => {
+        for (const before1 of [true, false]) {
+          for (const before2 of [true, false]) {
+            formatting.clear();
+            const mark1 = formatting.newMark(
+              { pos: Order.MIN_POSITION, before: false },
+              { pos: poss[6], before: before1 },
+              "url",
+              "www1"
+            );
+            formatting.addMark(mark1);
+            const mark2 = formatting.newMark(
+              { pos: poss[3], before: before2 },
+              { pos: poss[6], before: before1 },
+              "bold",
+              true
+            );
+
+            const changes = formatting.addMark(mark2);
+            assert.deepStrictEqual(formatting.formattedSpans(), [
+              {
+                start: { pos: Order.MIN_POSITION, before: false },
+                end: { pos: poss[3], before: before2 },
+                format: { url: "www1" },
+              },
+              {
+                start: { pos: poss[3], before: before2 },
+                end: { pos: poss[6], before: before1 },
+                format: { url: "www1", bold: true },
+              },
+              {
+                start: { pos: poss[6], before: before1 },
+                end: { pos: Order.MAX_POSITION, before: true },
+                format: {},
+              },
+            ]);
+            assert.deepStrictEqual(changes, [
+              {
+                start: { pos: poss[3], before: before2 },
+                end: { pos: poss[6], before: before1 },
+                key: "bold",
+                value: true,
+                previousValue: null,
+                format: { url: "www1", bold: true },
+              },
+            ]);
+            checkMisc();
+          }
+        }
+      });
+
+      // One mark's end is the other's start.
+      test("same start/end anchor", () => {
+        for (const before1 of [true, false]) {
+          for (const before3 of [true, false]) {
+            formatting.clear();
+            const mark1 = formatting.newMark(
+              { pos: Order.MIN_POSITION, before: false },
+              { pos: poss[6], before: before1 },
+              "url",
+              "www1"
+            );
+            formatting.addMark(mark1);
+            const mark2 = formatting.newMark(
+              { pos: poss[6], before: before1 },
+              { pos: poss[9], before: before3 },
+              "bold",
+              true
+            );
+
+            const changes = formatting.addMark(mark2);
+            assert.deepStrictEqual(formatting.formattedSpans(), [
+              {
+                start: { pos: Order.MIN_POSITION, before: false },
+                end: { pos: poss[6], before: before1 },
+                format: { url: "www1" },
+              },
+              {
+                start: { pos: poss[6], before: before1 },
+                end: { pos: poss[9], before: before3 },
+                format: { bold: true },
+              },
+              {
+                start: { pos: poss[9], before: before3 },
+                end: { pos: Order.MAX_POSITION, before: true },
+                format: {},
+              },
+            ]);
+            assert.deepStrictEqual(changes, [
+              {
+                start: { pos: poss[6], before: before1 },
+                end: { pos: poss[9], before: before3 },
+                key: "bold",
+                value: true,
+                previousValue: null,
+                format: { bold: true },
+              },
+            ]);
+            checkMisc();
+          }
+        }
+      });
+
+      // Spans that touch same pos but different anchors.
+      test("same start pos 1", () => {
+        for (const before1 of [true, false]) {
+          for (const before3 of [true, false]) {
+            formatting.clear();
+            const mark1 = formatting.newMark(
+              { pos: poss[3], before: false },
+              { pos: poss[6], before: before1 },
+              "url",
+              "www1"
+            );
+            formatting.addMark(mark1);
+            const mark2 = formatting.newMark(
+              { pos: poss[3], before: true },
+              { pos: poss[9], before: before3 },
+              "bold",
+              true
+            );
+
+            const changes = formatting.addMark(mark2);
+            assert.deepStrictEqual(formatting.formattedSpans(), [
+              {
+                start: { pos: Order.MIN_POSITION, before: false },
+                end: { pos: poss[3], before: true },
+                format: {},
+              },
+              {
+                start: { pos: poss[3], before: true },
+                end: { pos: poss[3], before: false },
+                format: { bold: true },
+              },
+              {
+                start: { pos: poss[3], before: false },
+                end: { pos: poss[6], before: before1 },
+                format: { url: "www1", bold: true },
+              },
+              {
+                start: { pos: poss[6], before: before1 },
+                end: { pos: poss[9], before: before3 },
+                format: { bold: true },
+              },
+              {
+                start: { pos: poss[9], before: before3 },
+                end: { pos: Order.MAX_POSITION, before: true },
+                format: {},
+              },
+            ]);
+            assert.deepStrictEqual(changes, [
+              {
+                start: { pos: poss[3], before: true },
+                end: { pos: poss[3], before: false },
+                key: "bold",
+                value: true,
+                previousValue: null,
+                format: { bold: true },
+              },
+              {
+                start: { pos: poss[3], before: false },
+                end: { pos: poss[6], before: before1 },
+                key: "bold",
+                value: true,
+                previousValue: null,
+                format: { url: "www1", bold: true },
+              },
+              {
+                start: { pos: poss[6], before: before1 },
+                end: { pos: poss[9], before: before3 },
+                key: "bold",
+                value: true,
+                previousValue: null,
+                format: { bold: true },
+              },
+            ]);
+            checkMisc();
+          }
+        }
+      });
+
+      test("same start pos 2", () => {
+        for (const before1 of [true, false]) {
+          for (const before3 of [true, false]) {
+            formatting.clear();
+            const mark1 = formatting.newMark(
+              // Booleans are flipped relative to "same start pos 1".
+              { pos: poss[3], before: true },
+              { pos: poss[6], before: before1 },
+              "url",
+              "www1"
+            );
+            formatting.addMark(mark1);
+            const mark2 = formatting.newMark(
+              { pos: poss[3], before: false },
+              { pos: poss[9], before: before3 },
+              "bold",
+              true
+            );
+
+            const changes = formatting.addMark(mark2);
+            assert.deepStrictEqual(formatting.formattedSpans(), [
+              {
+                start: { pos: Order.MIN_POSITION, before: false },
+                end: { pos: poss[3], before: true },
+                format: {},
+              },
+              {
+                start: { pos: poss[3], before: true },
+                end: { pos: poss[3], before: false },
+                format: { url: "www1" },
+              },
+              {
+                start: { pos: poss[3], before: false },
+                end: { pos: poss[6], before: before1 },
+                format: { url: "www1", bold: true },
+              },
+              {
+                start: { pos: poss[6], before: before1 },
+                end: { pos: poss[9], before: before3 },
+                format: { bold: true },
+              },
+              {
+                start: { pos: poss[9], before: before3 },
+                end: { pos: Order.MAX_POSITION, before: true },
+                format: {},
+              },
+            ]);
+            assert.deepStrictEqual(changes, [
+              {
+                start: { pos: poss[3], before: false },
+                end: { pos: poss[6], before: before1 },
+                key: "bold",
+                value: true,
+                previousValue: null,
+                format: { url: "www1", bold: true },
+              },
+              {
+                start: { pos: poss[6], before: before1 },
+                end: { pos: poss[9], before: before3 },
+                key: "bold",
+                value: true,
+                previousValue: null,
+                format: { bold: true },
+              },
+            ]);
+            checkMisc();
+          }
+        }
+      });
+
+      test("same end pos 1", () => {
+        for (const before2 of [true, false]) {
+          formatting.clear();
+          const mark1 = formatting.newMark(
+            { pos: Order.MIN_POSITION, before: false },
+            { pos: poss[6], before: false },
+            "url",
+            "www1"
+          );
+          formatting.addMark(mark1);
+          const mark2 = formatting.newMark(
+            { pos: poss[3], before: before2 },
+            { pos: poss[6], before: true },
+            "bold",
+            true
+          );
+
+          const changes = formatting.addMark(mark2);
+          assert.deepStrictEqual(formatting.formattedSpans(), [
+            {
+              start: { pos: Order.MIN_POSITION, before: false },
+              end: { pos: poss[3], before: before2 },
+              format: { url: "www1" },
+            },
+            {
+              start: { pos: poss[3], before: before2 },
+              end: { pos: poss[6], before: true },
+              format: { url: "www1", bold: true },
+            },
+            {
+              start: { pos: poss[6], before: true },
+              end: { pos: poss[6], before: false },
+              format: { url: "www1" },
+            },
+            {
+              start: { pos: poss[6], before: false },
+              end: { pos: Order.MAX_POSITION, before: true },
+              format: {},
+            },
+          ]);
+          assert.deepStrictEqual(changes, [
+            {
+              start: { pos: poss[3], before: before2 },
+              end: { pos: poss[6], before: true },
+              key: "bold",
+              value: true,
+              previousValue: null,
+              format: { url: "www1", bold: true },
+            },
+          ]);
+          checkMisc();
+        }
+      });
+
+      test("same end pos 2", () => {
+        for (const before2 of [true, false]) {
+          formatting.clear();
+          const mark1 = formatting.newMark(
+            { pos: Order.MIN_POSITION, before: false },
+            // Booleans are flipped relative to "same end pos 1".
+            { pos: poss[6], before: true },
+            "url",
+            "www1"
+          );
+          formatting.addMark(mark1);
+          const mark2 = formatting.newMark(
+            { pos: poss[3], before: before2 },
+            { pos: poss[6], before: false },
+            "bold",
+            true
+          );
+
+          const changes = formatting.addMark(mark2);
+          assert.deepStrictEqual(formatting.formattedSpans(), [
+            {
+              start: { pos: Order.MIN_POSITION, before: false },
+              end: { pos: poss[3], before: before2 },
+              format: { url: "www1" },
+            },
+            {
+              start: { pos: poss[3], before: before2 },
+              end: { pos: poss[6], before: true },
+              format: { url: "www1", bold: true },
+            },
+            {
+              start: { pos: poss[6], before: true },
+              end: { pos: poss[6], before: false },
+              format: { bold: true },
+            },
+            {
+              start: { pos: poss[6], before: false },
+              end: { pos: Order.MAX_POSITION, before: true },
+              format: {},
+            },
+          ]);
+          assert.deepStrictEqual(changes, [
+            {
+              start: { pos: poss[3], before: before2 },
+              end: { pos: poss[6], before: true },
+              key: "bold",
+              value: true,
+              previousValue: null,
+              format: { url: "www1", bold: true },
+            },
+            {
+              start: { pos: poss[6], before: true },
+              end: { pos: poss[6], before: false },
+              key: "bold",
+              value: true,
+              previousValue: null,
+              format: { bold: true },
+            },
+          ]);
+          checkMisc();
+        }
+      });
+
+      test("same start/end pos 1", () => {
+        for (const before3 of [true, false]) {
+          formatting.clear();
+          const mark1 = formatting.newMark(
+            { pos: Order.MIN_POSITION, before: false },
+            { pos: poss[3], before: true },
+            "url",
+            "www1"
+          );
+          formatting.addMark(mark1);
+          const mark2 = formatting.newMark(
+            { pos: poss[3], before: false },
+            { pos: poss[9], before: before3 },
+            "bold",
+            true
+          );
+
+          const changes = formatting.addMark(mark2);
+          assert.deepStrictEqual(formatting.formattedSpans(), [
+            {
+              start: { pos: Order.MIN_POSITION, before: false },
+              end: { pos: poss[3], before: true },
+              format: { url: "www1" },
+            },
+            {
+              start: { pos: poss[3], before: true },
+              end: { pos: poss[3], before: false },
+              format: {},
+            },
+            {
+              start: { pos: poss[3], before: false },
+              end: { pos: poss[9], before: before3 },
+              format: { bold: true },
+            },
+            {
+              start: { pos: poss[9], before: before3 },
+              end: { pos: Order.MAX_POSITION, before: true },
+              format: {},
+            },
+          ]);
+          assert.deepStrictEqual(changes, [
+            {
+              start: { pos: poss[3], before: false },
+              end: { pos: poss[9], before: before3 },
+              key: "bold",
+              value: true,
+              previousValue: null,
+              format: { bold: true },
+            },
+          ]);
+          checkMisc();
+        }
+      });
+
+      test("same start/end pos 2", () => {
+        for (const before3 of [true, false]) {
+          formatting.clear();
+          const mark1 = formatting.newMark(
+            { pos: Order.MIN_POSITION, before: false },
+            // Booleans are flipped relative to "same start/end pos 1".
+            { pos: poss[3], before: false },
+            "url",
+            "www1"
+          );
+          formatting.addMark(mark1);
+          const mark2 = formatting.newMark(
+            { pos: poss[3], before: true },
+            { pos: poss[9], before: before3 },
+            "bold",
+            true
+          );
+
+          const changes = formatting.addMark(mark2);
+          assert.deepStrictEqual(formatting.formattedSpans(), [
+            {
+              start: { pos: Order.MIN_POSITION, before: false },
+              end: { pos: poss[3], before: true },
+              format: { url: "www1" },
+            },
+            {
+              start: { pos: poss[3], before: true },
+              end: { pos: poss[3], before: false },
+              format: { url: "www1", bold: true },
+            },
+            {
+              start: { pos: poss[3], before: false },
+              end: { pos: poss[9], before: before3 },
+              format: { bold: true },
+            },
+            {
+              start: { pos: poss[9], before: before3 },
+              end: { pos: Order.MAX_POSITION, before: true },
+              format: {},
+            },
+          ]);
+          assert.deepStrictEqual(changes, [
+            {
+              start: { pos: poss[3], before: true },
+              end: { pos: poss[3], before: false },
+              key: "bold",
+              value: true,
+              previousValue: null,
+              format: { url: "www1", bold: true },
+            },
+            {
+              start: { pos: poss[3], before: false },
+              end: { pos: poss[9], before: before3 },
+              key: "bold",
+              value: true,
+              previousValue: null,
+              format: { bold: true },
+            },
+          ]);
+          checkMisc();
+        }
       });
     });
 

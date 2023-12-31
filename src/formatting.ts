@@ -1,4 +1,11 @@
-import { BunchIDs, LexList, List, Order, Outline, Position } from "list-positions";
+import {
+  BunchIDs,
+  LexList,
+  List,
+  Order,
+  Outline,
+  Position,
+} from "list-positions";
 import { indexOfAnchor } from "./helpers";
 
 export type Anchor = {
@@ -497,7 +504,9 @@ export class Formatting<M extends IMark> {
   }
 
   // TODO: slice args?
-  formattedSlices(list: List<unknown> | LexList<unknown> | Outline): FormattedSlice[] {
+  formattedSlices(
+    list: List<unknown> | LexList<unknown> | Outline
+  ): FormattedSlice[] {
     // TODO: combine neighbors with equal formats.
     // TODO: Stop formattedSpans early if we reach the end of list, using slice args.
     // Or at least break once endIndex == length, to save on indexOfAnchor calls.
@@ -516,8 +525,6 @@ export class Formatting<M extends IMark> {
     }
     return ans;
   }
-
-  
 
   /**
    * All marks, regardless of whether they are currently winning.

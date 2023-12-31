@@ -2,17 +2,45 @@ import { BunchIDs, Order } from "list-positions";
 import { Anchor } from "./anchor";
 import { FormatChange, Formatting, FormattingSavedState } from "./formatting";
 
+/**
+ * Mark type for TimestampFormatting.
+ *
+ * To create a TimestampMark, use `TimestampFormatting.newMark`.
+ *
+ * TimestampMark implements IMark and uses
+ * [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp)
+ * for the compareMarks order. TimestampMarks work even in a
+ * collaborative setting, with the properties:
+ * 1. TimestampMarks are globally unique, even if multiple collaborators
+ * create them concurrently.
+ * Specifically, the pair (creatorID, timestamp) is unique.
+ * 2. A new TimestampMark is always greater than all marks that were
+ * previously created or added by its TimestampFormatting.
+ * Thus a new mark "wins" over all marks in the current state, as expected.
+ */
 export type TimestampMark = {
+  /** TODO: copy from IMark. x4 */
   start: Anchor;
   end: Anchor;
   key: string;
-  /** Anything except null - that's reserved to mean "delete this format". */
   value: any;
+  /**
+   * The replicaID of the TimestampFormatting instance that created this mark
+   * (via `TimestampFormatting.newMark`).
+   */
   creatorID: string;
-  /** Lamport timestamp. Ties broken by creatorID. Always positive. */
+  /**
+   * The mark's [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp).
+   *
+   * Marks are sorted by this timestamp, with ties broken using the lexicographic
+   * order on creatorIDs.
+   */
   timestamp: number;
 };
 
+/**
+ * Compare function for TimestampMarks.
+ */
 function compareTimestampMarks(a: TimestampMark, b: TimestampMark): number {
   if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
   if (a.creatorID === b.creatorID) return 0;
@@ -33,10 +61,31 @@ function compareTimestampMarks(a: TimestampMark, b: TimestampMark): number {
  */
 export type TimestampFormattingSavedState = FormattingSavedState<TimestampMark>;
 
+/**
+ * TODO
+ */
 export class TimestampFormatting extends Formatting<TimestampMark> {
+  /**
+   * Our replicaID, used as all of our created marks'
+   * `creatorID`.
+   */
   readonly replicaID: string;
+  /**
+   * Current Lamport timestamp. Our next timestamp will be one greater.
+   */
   private timestamp = 0;
 
+  /**
+   * Constructs a TimestampFormatting.
+   *
+   * @param order The Order to use for `this.order`.
+   * Typically, it should be shared with the list(s) that this
+   * is formatting.
+   * If not provided, a `new Order()` is used.
+   * @param options.replicaID Our replicaID, used as all of our created marks'
+   * `creatorID`. It is _not_ used by `this.order`.
+   * Default: list-positions's `BunchIDs.newReplicaID()`.
+   */
   constructor(order: Order, options?: { replicaID?: string }) {
     super(order, compareTimestampMarks);
 
@@ -44,14 +93,11 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
   }
 
   /**
-   * Creates a new TimestampMark without adding it.
+   * Creates and returns a unique new TimestampMark. The mark is _not_
+   * added to our set of marks; you must call `this.addMark` separately.
    *
-   * It is greater than all known marks and uses our replicaID.
-   *
-   * @param start
-   * @param end
-   * @param key
-   * @param value
+   * The mark's timestamp is greater than that of all previously created or added marks,
+   * and it uses `this.replicaID` as its creatorID.
    */
   newMark(start: Anchor, end: Anchor, key: string, value: any): TimestampMark {
     return {

@@ -1,4 +1,5 @@
-import { BunchIDs, List, Order, Position } from "list-positions";
+import { BunchIDs, LexList, List, Order, Outline, Position } from "list-positions";
+import { indexOfAnchor } from "./helpers";
 
 export type Anchor = {
   /**
@@ -34,6 +35,12 @@ export interface IMark {
 export type FormattedSpan = {
   start: Anchor;
   end: Anchor;
+  format: Record<string, any>;
+};
+
+export type FormattedSlice = {
+  startIndex: number;
+  endIndex: number;
   format: Record<string, any>;
 };
 
@@ -488,6 +495,29 @@ export class Formatting<M extends IMark> {
       format: slice.data,
     }));
   }
+
+  // TODO: slice args?
+  formattedSlices(list: List<unknown> | LexList<unknown> | Outline): FormattedSlice[] {
+    // TODO: combine neighbors with equal formats.
+    // TODO: Stop formattedSpans early if we reach the end of list, using slice args.
+    // Or at least break once endIndex == length, to save on indexOfAnchor calls.
+    const ans: FormattedSlice[] = [];
+    let startIndex = 0;
+    for (const span of this.formattedSpans()) {
+      const endIndex = indexOfAnchor(list, span.end);
+      if (endIndex !== startIndex) {
+        ans.push({
+          startIndex,
+          endIndex,
+          format: span.format,
+        });
+        startIndex = endIndex;
+      }
+    }
+    return ans;
+  }
+
+  
 
   /**
    * All marks, regardless of whether they are currently winning.

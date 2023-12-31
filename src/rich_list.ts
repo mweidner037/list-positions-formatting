@@ -7,7 +7,7 @@ import {
   Position,
 } from "list-positions";
 import { Anchor, FormatChange } from "./formatting";
-import { diffFormats, sliceFromSpan, spanFromSlice } from "./helpers";
+import { diffFormats, indexOfAnchor, spanFromSlice } from "./helpers";
 import { TimestampFormatting, TimestampMark } from "./timestamp_formatting";
 
 export type FormattedValues<T> = {
@@ -62,12 +62,6 @@ export class RichList<T> {
     });
     this.expandRules = options?.expandRules;
   }
-
-  static compareMarks = (a: TimestampMark, b: TimestampMark): number => {
-    if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
-    if (a.creatorID === b.creatorID) return 0;
-    return a.creatorID > b.creatorID ? 1 : -1;
-  };
 
   /**
    *
@@ -181,23 +175,18 @@ export class RichList<T> {
     return this.formatting.getFormat(this.list.positionAt(index));
   }
 
+  // TODO: slice args?
   formattedValues(): FormattedValues<T>[] {
-    // TODO: combine identical neighbors; opts.
-    // If nontrivial, copy opts in a Formatting.formattedSlices method.
+    const slices = this.formatting.formattedSlices(this.list);
     const values = this.list.slice();
-    return this.formatting.formattedSpans().map((span) => {
-      const { startIndex, endIndex } = sliceFromSpan(
-        this.list,
-        span.start,
-        span.end
+    for (const slice of slices) {
+      // Okay to modify slice in-place.
+      (slice as FormattedValues<T>).values = values.slice(
+        slice.startIndex,
+        slice.endIndex
       );
-      return {
-        startIndex,
-        endIndex,
-        values: values.slice(startIndex, endIndex),
-        format: span.format,
-      };
-    });
+    }
+    return slices as FormattedValues<T>[];
   }
 
   /**
@@ -209,7 +198,7 @@ export class RichList<T> {
   > {
     let index = 0;
     for (const span of this.formatting.formattedSpans()) {
-      const { endIndex } = sliceFromSpan(this.list, span.start, span.end);
+      const endIndex = indexOfAnchor(this.list, span.end);
       for (; index < endIndex; index++) {
         const pos = this.list.positionAt(index);
         yield [pos, this.list.get(pos)!, span.format];

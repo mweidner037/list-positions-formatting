@@ -45,14 +45,27 @@ export function sliceFromSpan(
   start: Anchor,
   end: Anchor
 ): { startIndex: number; endIndex: number } {
+  return {
+    startIndex: indexOfAnchor(list, start),
+    endIndex: indexOfAnchor(list, end),
+  };
+}
+
+/**
+ * Returns the next index after anchor in list,
+ * or `list.length` if anchor is after all present positions.
+ *
+ * You can use this function to convert either endpoint of a span
+ * to the corresponding slice endpoint (see sliceFromSpan).
+ */
+export function indexOfAnchor(
+  list: List<unknown> | LexList<unknown> | Outline,
+  anchor: Anchor
+): number {
   const posList = list instanceof LexList ? list.list : list;
-  const startIndex = start.before
-    ? posList.indexOfPosition(start.pos, "right")
-    : posList.indexOfPosition(start.pos, "left") + 1;
-  const endIndex = end.before
-    ? posList.indexOfPosition(end.pos, "right")
-    : posList.indexOfPosition(end.pos, "left") + 1;
-  return { startIndex, endIndex };
+  return anchor.before
+    ? posList.indexOfPosition(anchor.pos, "right")
+    : posList.indexOfPosition(anchor.pos, "left") + 1;
 }
 
 /**

@@ -10,7 +10,7 @@ import { LexList, List, Order, Outline, Position } from "list-positions";
  * Each formatting mark starts and ends at an anchor.
  * Using anchors instead of positions lets the mark choose whether it "expands"
  * to include new positions before/after its original range.
- * 
+ *
  * See also: [Utilities](TODO:readme section) for working with Anchors.
  */
 export type Anchor = {
@@ -46,17 +46,17 @@ export const Anchors = {
   /**
    * Returns the next index to the right of anchor in the given list,
    * or `list.length` if anchor is after all present positions.
-   * 
+   *
    * A span `{ start: Anchor, end: Anchor }`, when projected onto a list,
-   * covers precisely the slice 
+   * covers precisely the slice
    * ```ts
-   * { 
+   * {
    *   startIndex: Anchors.indexOfAnchor(list, start),
    *   endIndex: Anchors.indexOfAnchor(list, end)
    * }
    * ```
    * (endIndex not included).
-   * 
+   *
    * See also:
    * - sliceFromSpan: Does the above start/end to slice conversion.
    * - spanFromSlice: Partial inverse for sliceFromSpan, and the closest thing

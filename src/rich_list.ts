@@ -15,13 +15,45 @@ import {
   TimestampMark,
 } from "./timestamp_formatting";
 
+/**
+ * A slice of values with the same format, returned by
+ * RichList.formattedValues.
+ *
+ * startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+ */
 export type FormattedValues<T> = {
+  /**
+   * The slice's starting index (inclusive).
+   */
   startIndex: number;
+  /**
+   * The slice's ending index (exclusive).
+   */
   endIndex: number;
+  /**
+   * The slice's values, i.e., `richList.list.slice(startIndex, endIndex)`.
+   */
   values: T[];
+  /**
+   * The common format for all of the slice's values.
+   */
   format: Record<string, any>;
 };
 
+/**
+ * A JSON-serializable saved state for a `RichList<T>`.
+ *
+ * See RichList.save and RichList.load.
+ *
+ * ### Format
+ *
+ * For advanced usage, you may read and write RichListSavedStates directly.
+ *
+ * The format is merely a `...SavedState` object for each of:
+ * - `richList.order` (class Order from [list-positions](https://github.com/mweidner037/list-positions)).
+ * - `richList.list` (class List from [list-positions](https://github.com/mweidner037/list-positions)).
+ * - `richList.formatting` (class TimestampFormatting).
+ */
 export type RichListSavedState<T> = {
   order: OrderSavedState;
   list: ListSavedState<T>;
@@ -190,6 +222,19 @@ export class RichList<T> {
     }
   }
 
+  /**
+   * Returns a saved state for this RichList.
+   *
+   * The saved state describes our current list and formatting, plus
+   * [Order metadata](https://github.com/mweidner037/list-positions#managing-metadata),
+   * in JSON-serializable form. You can load this state on another RichList
+   * by calling `load(savedState)`, possibly in a different session or on a
+   * different device.
+   *
+   * Note: You can instead save and load each component (`this.order`, `this.list`,
+   * and `this.formatting`) separately. If you do so, be sure to load `this.order`
+   * before the others.
+   */
   save(): RichListSavedState<T> {
     return {
       order: this.order.save(),
@@ -198,6 +243,12 @@ export class RichList<T> {
     };
   }
 
+  /**
+   * Loads a saved state returned by another RichList's `save()` method.
+   *
+   * Loading sets our list and formatting to match the saved RichList's,
+   * *overwriting* our current state.
+   */
   load(savedState: RichListSavedState<T>): void {
     this.order.load(savedState.order);
     this.list.load(savedState.list);

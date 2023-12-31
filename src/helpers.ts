@@ -6,14 +6,14 @@ import { Anchor, Anchors } from "./anchor";
 
 /**
  * Returns a span `{ start: Anchor, end: Anchor }` that covers precisely
- * the given slice of list. The startIndex and endIndex are as in `Array.slice`.
- * 
+ * the given slice of list. The startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+ *
  * The span covers all positions from
  * `list.positionAt(startIndex)` to `list.positionAt(endIndex - 1)` inclusive,
  * including positions that are not currently present in list.
  * It may also "expand" to cover not-currently-present positions at
  * the slice's endpoints, depending on the value of `expand`.
- * 
+ *
  * @param expand How the span affects not-currently-present positions at
  * the slice's endpoints.
  * - "after" (default): The span expands to cover positions at the end, i.e.,
@@ -23,7 +23,7 @@ import { Anchor, Anchors } from "./anchor";
  * between `list.positionAt(startIndex - 1)` and `list.positionAt(startIndex)`
  * - "both": Combination of "after" and "before".
  * - "none": Does not expand. This is how hyperlinks usually behave in rich-text editors.
- * 
+ *
  * @throws If startIndex >= endIndex (the slice is empty).
  */
 export function spanFromSlice(
@@ -70,7 +70,7 @@ export function spanFromSlice(
  * returning the slice that it currently covers.
  *
  * The slice is expressed in terms of its startIndex and endIndex
- * (endIndex not included), like arguments to `Array.slice`.
+ * (endIndex not included), like arguments to [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
  */
 export function sliceFromSpan(
   list: List<unknown> | LexList<unknown> | Outline,

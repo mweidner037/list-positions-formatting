@@ -20,7 +20,16 @@ function compareTimestampMarks(a: TimestampMark, b: TimestampMark): number {
 }
 
 /**
- * TODO: copy docs from FormattingSavedState.
+ * A JSON-serializable saved state for a `TimestampFormatting`.
+ *
+ * See TimestampFormatting.save and TimestampFormatting.load.
+ *
+ * ### Format
+ *
+ * For advanced usage, you may read and write TimestampFormattingSavedStates directly.
+ *
+ * Its format is the array of all marks _in compareMarks order (ascending)_.
+ * This is merely `[...formatting.marks()]`.
  */
 export type TimestampFormattingSavedState = FormattingSavedState<TimestampMark>;
 
@@ -60,10 +69,25 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
     return super.addMark(mark);
   }
 
+  /**
+   * Returns a saved state for this TimestampFormatting.
+   *
+   * The saved state describes all of our (non-deleted) marks in JSON-serializable form.
+   * (In fact, it is merely the array `[...this.marks()]`.)
+   * You can load this state on another TimestampFormatting
+   * by calling `load(savedState)`, possibly in a different session or on a
+   * different device.
+   */
   save(): TimestampFormattingSavedState {
     return super.save();
   }
 
+  /**
+   * Loads a saved state returned by another TimestampFormatting's `save()` method.
+   *
+   * Loading sets our marks to match the saved TimestampFormatting's,
+   * *overwriting* our current state.
+   */
   load(savedState: TimestampFormattingSavedState): void {
     super.load(savedState);
     if (savedState.length !== 0) {

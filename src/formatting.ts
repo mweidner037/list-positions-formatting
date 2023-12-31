@@ -48,7 +48,16 @@ export type FormatChange = {
 };
 
 /**
- * In compareSpans order (increasing). save() is same as marks().
+ * A JSON-serializable saved state for a `Formatting<M>`.
+ *
+ * See Formatting.save and Formatting.load.
+ *
+ * ### Format
+ *
+ * For advanced usage, you may read and write FormattingSavedStates directly.
+ *
+ * Its format is the array of all marks _in compareMarks order (ascending)_.
+ * This is merely `[...formatting.marks()]`.
  */
 export type FormattingSavedState<M extends IMark> = M[];
 
@@ -525,12 +534,26 @@ export class Formatting<M extends IMark> {
     return this.orderedMarks[Symbol.iterator]();
   }
 
+  /**
+   * Returns a saved state for this Formatting.
+   *
+   * The saved state describes all of our (non-deleted) marks in JSON-serializable form.
+   * (In fact, it is merely the array `[...this.marks()]`.)
+   * You can load this state on another Formatting
+   * by calling `load(savedState)`, possibly in a different session or on a
+   * different device.
+   */
   save(): FormattingSavedState<M> {
     return this.orderedMarks.slice();
   }
 
-  // Overwrites existing state. (To merge, call addMarks in a loop.)
-  // To see result, call formatted.
+  /**
+   * Loads a saved state returned by another Formatting's `save()` method.
+   * The other Formatting must have used the same compareMarks function as us.
+   *
+   * Loading sets our marks to match the saved Formatting's,
+   * *overwriting* our current state.
+   */
   load(savedState: FormattingSavedState<M>): void {
     this.clear();
 

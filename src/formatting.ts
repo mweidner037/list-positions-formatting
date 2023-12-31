@@ -6,19 +6,7 @@ import {
   Outline,
   Position,
 } from "list-positions";
-import { Anchors } from "./anchors";
-
-export type Anchor = {
-  /**
-   * Could be min or max position, but marks can't include them.
-   * So be careful allowing min/max Positions in your list.
-   */
-  pos: Position;
-  /**
-   * true if before, false if after.
-   */
-  before: boolean;
-};
+import { Anchor, Anchors } from "./anchor";
 
 /**
  * Missing metadata needed for comparison,

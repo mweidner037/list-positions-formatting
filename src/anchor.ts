@@ -1,5 +1,16 @@
-import { LexList, List, Order, Outline } from "list-positions";
-import type { Anchor } from "./formatting";
+import { LexList, List, Order, Outline, Position } from "list-positions";
+
+export type Anchor = {
+  /**
+   * Could be min or max position, but marks can't include them.
+   * So be careful allowing min/max Positions in your list.
+   */
+  pos: Position;
+  /**
+   * true if before, false if after.
+   */
+  before: boolean;
+};
 
 export const Anchors = {
   MIN_ANCHOR: { pos: Order.MIN_POSITION, before: false } as Anchor,

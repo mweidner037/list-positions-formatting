@@ -6,7 +6,7 @@ import {
   OrderSavedState,
   Position,
 } from "list-positions";
-import { Anchors } from "./anchors";
+import { Anchors } from "./anchor";
 import { FormatChange } from "./formatting";
 import { diffFormats, spanFromSlice } from "./helpers";
 import {

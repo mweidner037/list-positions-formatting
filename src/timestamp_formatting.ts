@@ -1,10 +1,6 @@
 import { BunchIDs, Order } from "list-positions";
-import {
-  Anchor,
-  FormatChange,
-  Formatting,
-  FormattingSavedState,
-} from "./formatting";
+import { Anchor } from "./anchor";
+import { FormatChange, Formatting, FormattingSavedState } from "./formatting";
 
 export type TimestampMark = {
   start: Anchor;

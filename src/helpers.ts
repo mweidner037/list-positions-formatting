@@ -1,6 +1,5 @@
 import { LexList, List, Order, Outline } from "list-positions";
-import { Anchors } from "./anchors";
-import type { Anchor } from "./formatting";
+import { Anchor, Anchors } from "./anchor";
 
 export function spanFromSlice(
   list: List<unknown> | LexList<unknown> | Outline,

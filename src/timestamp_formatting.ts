@@ -17,6 +17,12 @@ export type TimestampMark = {
   timestamp: number;
 };
 
+function compareTimestampMarks(a: TimestampMark, b: TimestampMark): number {
+  if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+  if (a.creatorID === b.creatorID) return 0;
+  return a.creatorID > b.creatorID ? 1 : -1;
+}
+
 /**
  * TODO: copy docs from FormattingSavedState.
  */
@@ -27,7 +33,7 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
   private timestamp = 0;
 
   constructor(order: Order, options?: { replicaID?: string }) {
-    super(order, TimestampFormatting.compareMarks);
+    super(order, compareTimestampMarks);
 
     this.replicaID = options?.replicaID ?? BunchIDs.newReplicaID();
   }
@@ -72,10 +78,4 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
       );
     }
   }
-
-  static compareMarks = (a: TimestampMark, b: TimestampMark): number => {
-    if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
-    if (a.creatorID === b.creatorID) return 0;
-    return a.creatorID > b.creatorID ? 1 : -1;
-  };
 }

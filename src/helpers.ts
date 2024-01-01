@@ -12,17 +12,19 @@ import { Anchor, Anchors } from "./anchor";
  * `list.positionAt(startIndex)` to `list.positionAt(endIndex - 1)` inclusive,
  * including positions that are not currently present in list.
  * It may also "expand" to cover not-currently-present positions at
- * the slice's endpoints, depending on the value of `expand`; see
- * [Expand Behavior](https://github.com/mweidner037/list-formatting#expand-behavior) in the readme.
+ * the slice's endpoints, depending on the value of `expand`.
  *
  * @param expand Whether the span covers not-currently-present positions at
  * the slice's endpoints.
  * - "after" (default): The span expands to cover positions at the end, i.e.,
  * between `list.positionAt(endIndex - 1)` and `list.positionAt(endIndex)`.
+ * This is the typical behavior for most rich-text format keys (e.g. bold): the
+ * formatting also affects future (& concurrent) characters inserted at the end.
  * - "before": Expands to cover positions at the beginning, i.e.,
- * between `list.positionAt(startIndex - 1)` and `list.positionAt(startIndex)`
+ * between `list.positionAt(startIndex - 1)` and `list.positionAt(startIndex)`.
  * - "both": Combination of "before" and "after".
  * - "none": Does not expand.
+ * This is the typical behavior for certain rich-text format keys, such as hyperlinks.
  *
  * @throws If startIndex >= endIndex (the slice is empty).
  */

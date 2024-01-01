@@ -117,9 +117,6 @@ export class RichList<T> {
   /**
    * Constructs a RichList.
    *
-   * @param options.expandRules The [expand behavior](https://github.com/mweidner037/list-formatting#expand-behavior)
-   * to use for new marks created by `insertWithFormat` and `format`.
-   * It inputs the mark's key and value. Default: Always returns "after".
    * @param options.order The Order to use for `this.order`. Both `this.list`
    * and `this.formatting` share the order. If neither `options.order` nor
    * `options.list` are provided, a `new Order()` is used.
@@ -129,6 +126,10 @@ export class RichList<T> {
    * @param options.replicaID The replica ID for `this.formatting`
    * (_not_ `this.order`). All of our created marks will use it as their
    * `creatorID`. Default: list-positions's `BunchIDs.newReplicaID()`.
+   * @param options.expandRules The value of `expand` to use when one is
+   * not provided to `this.format` and for all marks created by `this.insertWithFormat`.
+   * Expressed as a function that inputs the mark's key and value
+   * and outputs the `expand` to use. Default: Always returns "after".
    */
   constructor(options?: {
     expandRules?: (
@@ -237,8 +238,24 @@ export class RichList<T> {
    *
    * This method always creates a new mark, even if it is redundant.
    *
-   * @param expand The new mark's [expand behavior](https://github.com/mweidner037/list-formatting#expand-behavior).
-   * If not provided, defaults to calling the constructor's `options.expandRules`.
+   * The mark covers all positions from
+   * `this.list.positionAt(startIndex)` to `this.list.positionAt(endIndex - 1)` inclusive,
+   * including positions that are not currently present in `this.list`.
+   * It may also "expand" to cover not-currently-present positions at
+   * the slice's endpoints, depending on the value of `expand`.
+   *
+   * @param expand Whether the mark covers not-currently-present positions at
+   * the slice's endpoints. If not provided, the output of the constructors
+   * `options.expandRules` function is used, which defaults to "after".
+   * - "after": The mark expands to cover positions at the end, i.e.,
+   * between `this.list.positionAt(endIndex - 1)` and `this.list.positionAt(endIndex)`.
+   * This is the typical behavior for most rich-text format keys (e.g. bold): the
+   * formatting also affects future (& concurrent) characters inserted at the end.
+   * - "before": Expands to cover positions at the beginning, i.e.,
+   * between `this.list.positionAt(startIndex - 1)` and `this.list.positionAt(startIndex)`.
+   * - "both": Combination of "before" and "after".
+   * - "none": Does not expand.
+   * This is the typical behavior for certain rich-text format keys, such as hyperlinks.
    * @returns [created mark, non-redundant format changes]
    */
   format(

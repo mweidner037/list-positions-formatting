@@ -40,17 +40,19 @@ type Anchor = {
 };
 ```
 
-You can visualize a list's anchors as follows:
+<!-- You can visualize a list's anchors as follows:
 
-TODO: image.
+TODO: image. -->
 
 ### Marks
 
 A _mark_ is an instruction to change the format of a range of values. For example, a mark may make a sentence bold, or add a hyperlink to a word.
 
-Each mark starts and ends at an anchor. It sets a single key-value pair for all Positions between those anchors. For example, this mark gives `"cat"` the format `{ bold: true }`:
+Each mark starts and ends at an anchor. It sets a single key-value pair for all Positions between those anchors.
 
-TODO: image
+<!-- For example, this mark gives `"cat"` the format `{ bold: true }`:
+
+TODO: image -->
 
 Concretely, a mark implements the interface `IMark`:
 
@@ -83,27 +85,6 @@ Formally, given the current set of marks, the current format at a position `pos`
 - If `mark.value` is not null, then add the entry `{ key: mark.value }` to the format object. Otherwise, `key` is not present in the object.
 
 The null-value rule lets you delete a format key: for example, to change a range's format from `{ bold: true }` to `{}` (unbolding), add a new, winning mark with `mark.key = "bold"` and `mark.value = null`.
-
-### Expand Behavior
-
-(Docs under construction)
-
-<!-- TODO
-The span covers all positions from
- `list.positionAt(startIndex)` to `list.positionAt(endIndex - 1)` inclusive,
- including positions that are not currently present in list.
- It may also "expand" to cover not-currently-present positions at
- the slice's endpoints, depending on the value of `expand`.
-
- @param expand How the span affects not-currently-present positions at
- the slice's endpoints.
- - "after" (default): The span expands to cover positions at the end, i.e.,
- between `list.positionAt(endIndex - 1)` and `list.positionAt(endIndex)`.
- This is how most marks (e.g. bold) usually behave in rich-text editors.
- - "before": Expands to cover positions at the beginning, i.e.,
- between `list.positionAt(startIndex - 1)` and `list.positionAt(startIndex)`
- - "both": Combination of "after" and "before".
- - "none": Does not expand. This is how hyperlinks usually behave in rich-text editors. -->
 
 ## API
 

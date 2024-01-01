@@ -2,7 +2,12 @@ import { assert } from "chai";
 import { BunchIDs, List, Order, Position } from "list-positions";
 import { describe, test } from "mocha";
 import seedrandom from "seedrandom";
-import { FormattedSpan, TimestampFormatting, TimestampMark } from "../src";
+import {
+  Anchors,
+  FormattedSpan,
+  TimestampFormatting,
+  TimestampMark,
+} from "../src";
 
 describe("TimestampFormatting", () => {
   let rng!: seedrandom.prng;
@@ -77,8 +82,8 @@ describe("TimestampFormatting", () => {
     test("empty formatting", () => {
       assert.deepStrictEqual(formatting.formattedSpans(), [
         {
-          start: { pos: Order.MIN_POSITION, before: false },
-          end: { pos: Order.MAX_POSITION, before: true },
+          start: Anchors.MIN_ANCHOR,
+          end: Anchors.MAX_ANCHOR,
           format: {},
         },
       ]);
@@ -89,14 +94,14 @@ describe("TimestampFormatting", () => {
       // Add one mark and check changes & formattedSpans.
       let t = 1;
       for (const start of [
-        { pos: Order.MIN_POSITION, before: false },
+        Anchors.MIN_ANCHOR,
         { pos: poss[0], before: true },
         { pos: poss[0], before: false },
         { pos: poss[3], before: true },
         { pos: poss[3], before: false },
       ]) {
         for (const end of [
-          { pos: Order.MAX_POSITION, before: true },
+          Anchors.MAX_ANCHOR,
           { pos: poss[9], before: false },
           { pos: poss[9], before: true },
           { pos: poss[6], before: false },
@@ -122,7 +127,7 @@ describe("TimestampFormatting", () => {
           const spans: FormattedSpan[] = [];
           if (!Order.equalsPosition(start.pos, Order.MIN_POSITION)) {
             spans.push({
-              start: { pos: Order.MIN_POSITION, before: false },
+              start: Anchors.MIN_ANCHOR,
               end: start,
               format: {},
             });
@@ -131,7 +136,7 @@ describe("TimestampFormatting", () => {
           if (!Order.equalsPosition(end.pos, Order.MAX_POSITION)) {
             spans.push({
               start: end,
-              end: { pos: Order.MAX_POSITION, before: true },
+              end: Anchors.MAX_ANCHOR,
               format: {},
             });
           }
@@ -151,7 +156,7 @@ describe("TimestampFormatting", () => {
               formatting.clear();
 
               const mark1 = formatting.newMark(
-                { pos: Order.MIN_POSITION, before: false },
+                Anchors.MIN_ANCHOR,
                 { pos: poss[6], before: before1 },
                 "italic",
                 true
@@ -167,13 +172,13 @@ describe("TimestampFormatting", () => {
               const changes = formatting.addMark(mark2);
               assert.deepStrictEqual(formatting.formattedSpans(), [
                 {
-                  start: { pos: Order.MIN_POSITION, before: false },
+                  start: Anchors.MIN_ANCHOR,
                   end: { pos: poss[9], before: before3 },
                   format: { italic: true },
                 },
                 {
                   start: { pos: poss[9], before: before3 },
-                  end: { pos: Order.MAX_POSITION, before: true },
+                  end: Anchors.MAX_ANCHOR,
                   format: {},
                 },
               ]);
@@ -199,7 +204,7 @@ describe("TimestampFormatting", () => {
             for (const before3 of [true, false]) {
               formatting.clear();
               const mark1 = formatting.newMark(
-                { pos: Order.MIN_POSITION, before: false },
+                Anchors.MIN_ANCHOR,
                 { pos: poss[6], before: before1 },
                 "url",
                 "www1"
@@ -216,7 +221,7 @@ describe("TimestampFormatting", () => {
               const changes = formatting.addMark(mark2);
               assert.deepStrictEqual(formatting.formattedSpans(), [
                 {
-                  start: { pos: Order.MIN_POSITION, before: false },
+                  start: Anchors.MIN_ANCHOR,
                   end: { pos: poss[3], before: before2 },
                   format: { url: "www1" },
                 },
@@ -227,7 +232,7 @@ describe("TimestampFormatting", () => {
                 },
                 {
                   start: { pos: poss[9], before: before3 },
-                  end: { pos: Order.MAX_POSITION, before: true },
+                  end: Anchors.MAX_ANCHOR,
                   format: {},
                 },
               ]);
@@ -261,7 +266,7 @@ describe("TimestampFormatting", () => {
             for (const before3 of [true, false]) {
               formatting.clear();
               const mark1 = formatting.newMark(
-                { pos: Order.MIN_POSITION, before: false },
+                Anchors.MIN_ANCHOR,
                 { pos: poss[6], before: before1 },
                 "url",
                 "www1"
@@ -278,13 +283,13 @@ describe("TimestampFormatting", () => {
               const changes = formatting.addMark(mark2);
               assert.deepStrictEqual(formatting.formattedSpans(), [
                 {
-                  start: { pos: Order.MIN_POSITION, before: false },
+                  start: Anchors.MIN_ANCHOR,
                   end: { pos: poss[3], before: before2 },
                   format: { url: "www1" },
                 },
                 {
                   start: { pos: poss[3], before: before2 },
-                  end: { pos: Order.MAX_POSITION, before: true },
+                  end: Anchors.MAX_ANCHOR,
                   format: {},
                 },
               ]);
@@ -328,7 +333,7 @@ describe("TimestampFormatting", () => {
               const changes = formatting.addMark(mark2);
               assert.deepStrictEqual(formatting.formattedSpans(), [
                 {
-                  start: { pos: Order.MIN_POSITION, before: false },
+                  start: Anchors.MIN_ANCHOR,
                   end: { pos: poss[3], before: before2 },
                   format: {},
                 },
@@ -339,7 +344,7 @@ describe("TimestampFormatting", () => {
                 },
                 {
                   start: { pos: poss[9], before: before3 },
-                  end: { pos: Order.MAX_POSITION, before: true },
+                  end: Anchors.MAX_ANCHOR,
                   format: {},
                 },
               ]);
@@ -372,7 +377,7 @@ describe("TimestampFormatting", () => {
           for (const before2 of [true, false]) {
             formatting.clear();
             const mark1 = formatting.newMark(
-              { pos: Order.MIN_POSITION, before: false },
+              Anchors.MIN_ANCHOR,
               { pos: poss[6], before: before1 },
               "url",
               "www1"
@@ -389,7 +394,7 @@ describe("TimestampFormatting", () => {
             const changes = formatting.addMark(mark2);
             assert.deepStrictEqual(formatting.formattedSpans(), [
               {
-                start: { pos: Order.MIN_POSITION, before: false },
+                start: Anchors.MIN_ANCHOR,
                 end: { pos: poss[3], before: before2 },
                 format: { url: "www1" },
               },
@@ -400,7 +405,7 @@ describe("TimestampFormatting", () => {
               },
               {
                 start: { pos: poss[6], before: before1 },
-                end: { pos: Order.MAX_POSITION, before: true },
+                end: Anchors.MAX_ANCHOR,
                 format: {},
               },
             ]);
@@ -425,7 +430,7 @@ describe("TimestampFormatting", () => {
           for (const before3 of [true, false]) {
             formatting.clear();
             const mark1 = formatting.newMark(
-              { pos: Order.MIN_POSITION, before: false },
+              Anchors.MIN_ANCHOR,
               { pos: poss[6], before: before1 },
               "url",
               "www1"
@@ -441,7 +446,7 @@ describe("TimestampFormatting", () => {
             const changes = formatting.addMark(mark2);
             assert.deepStrictEqual(formatting.formattedSpans(), [
               {
-                start: { pos: Order.MIN_POSITION, before: false },
+                start: Anchors.MIN_ANCHOR,
                 end: { pos: poss[6], before: before1 },
                 format: { url: "www1" },
               },
@@ -452,7 +457,7 @@ describe("TimestampFormatting", () => {
               },
               {
                 start: { pos: poss[9], before: before3 },
-                end: { pos: Order.MAX_POSITION, before: true },
+                end: Anchors.MAX_ANCHOR,
                 format: {},
               },
             ]);
@@ -494,7 +499,7 @@ describe("TimestampFormatting", () => {
             const changes = formatting.addMark(mark2);
             assert.deepStrictEqual(formatting.formattedSpans(), [
               {
-                start: { pos: Order.MIN_POSITION, before: false },
+                start: Anchors.MIN_ANCHOR,
                 end: { pos: poss[3], before: true },
                 format: {},
               },
@@ -505,7 +510,7 @@ describe("TimestampFormatting", () => {
               },
               {
                 start: { pos: poss[9], before: before3 },
-                end: { pos: Order.MAX_POSITION, before: true },
+                end: Anchors.MAX_ANCHOR,
                 format: {},
               },
             ]);
@@ -563,7 +568,7 @@ describe("TimestampFormatting", () => {
             const changes = formatting.addMark(mark2);
             assert.deepStrictEqual(formatting.formattedSpans(), [
               {
-                start: { pos: Order.MIN_POSITION, before: false },
+                start: Anchors.MIN_ANCHOR,
                 end: { pos: poss[3], before: true },
                 format: {},
               },
@@ -579,7 +584,7 @@ describe("TimestampFormatting", () => {
               },
               {
                 start: { pos: poss[9], before: before3 },
-                end: { pos: Order.MAX_POSITION, before: true },
+                end: Anchors.MAX_ANCHOR,
                 format: {},
               },
             ]);
@@ -610,7 +615,7 @@ describe("TimestampFormatting", () => {
         for (const before2 of [true, false]) {
           formatting.clear();
           const mark1 = formatting.newMark(
-            { pos: Order.MIN_POSITION, before: false },
+            Anchors.MIN_ANCHOR,
             { pos: poss[6], before: false },
             "url",
             "www1"
@@ -627,7 +632,7 @@ describe("TimestampFormatting", () => {
           const changes = formatting.addMark(mark2);
           assert.deepStrictEqual(formatting.formattedSpans(), [
             {
-              start: { pos: Order.MIN_POSITION, before: false },
+              start: Anchors.MIN_ANCHOR,
               end: { pos: poss[3], before: before2 },
               format: { url: "www1" },
             },
@@ -643,7 +648,7 @@ describe("TimestampFormatting", () => {
             },
             {
               start: { pos: poss[6], before: false },
-              end: { pos: Order.MAX_POSITION, before: true },
+              end: Anchors.MAX_ANCHOR,
               format: {},
             },
           ]);
@@ -665,7 +670,7 @@ describe("TimestampFormatting", () => {
         for (const before2 of [true, false]) {
           formatting.clear();
           const mark1 = formatting.newMark(
-            { pos: Order.MIN_POSITION, before: false },
+            Anchors.MIN_ANCHOR,
             // Booleans are flipped relative to "same end pos 1".
             { pos: poss[6], before: true },
             "url",
@@ -683,7 +688,7 @@ describe("TimestampFormatting", () => {
           const changes = formatting.addMark(mark2);
           assert.deepStrictEqual(formatting.formattedSpans(), [
             {
-              start: { pos: Order.MIN_POSITION, before: false },
+              start: Anchors.MIN_ANCHOR,
               end: { pos: poss[3], before: before2 },
               format: { url: "www1" },
             },
@@ -694,7 +699,7 @@ describe("TimestampFormatting", () => {
             },
             {
               start: { pos: poss[6], before: false },
-              end: { pos: Order.MAX_POSITION, before: true },
+              end: Anchors.MAX_ANCHOR,
               format: {},
             },
           ]);
@@ -724,7 +729,7 @@ describe("TimestampFormatting", () => {
         for (const before3 of [true, false]) {
           formatting.clear();
           const mark1 = formatting.newMark(
-            { pos: Order.MIN_POSITION, before: false },
+            Anchors.MIN_ANCHOR,
             { pos: poss[3], before: true },
             "url",
             "www1"
@@ -741,7 +746,7 @@ describe("TimestampFormatting", () => {
           const changes = formatting.addMark(mark2);
           assert.deepStrictEqual(formatting.formattedSpans(), [
             {
-              start: { pos: Order.MIN_POSITION, before: false },
+              start: Anchors.MIN_ANCHOR,
               end: { pos: poss[3], before: true },
               format: { url: "www1" },
             },
@@ -757,7 +762,7 @@ describe("TimestampFormatting", () => {
             },
             {
               start: { pos: poss[9], before: before3 },
-              end: { pos: Order.MAX_POSITION, before: true },
+              end: Anchors.MAX_ANCHOR,
               format: {},
             },
           ]);
@@ -779,7 +784,7 @@ describe("TimestampFormatting", () => {
         for (const before3 of [true, false]) {
           formatting.clear();
           const mark1 = formatting.newMark(
-            { pos: Order.MIN_POSITION, before: false },
+            Anchors.MIN_ANCHOR,
             // Booleans are flipped relative to "same start/end pos 1".
             { pos: poss[3], before: false },
             "url",
@@ -797,7 +802,7 @@ describe("TimestampFormatting", () => {
           const changes = formatting.addMark(mark2);
           assert.deepStrictEqual(formatting.formattedSpans(), [
             {
-              start: { pos: Order.MIN_POSITION, before: false },
+              start: Anchors.MIN_ANCHOR,
               end: { pos: poss[3], before: true },
               format: { url: "www1" },
             },
@@ -808,7 +813,7 @@ describe("TimestampFormatting", () => {
             },
             {
               start: { pos: poss[9], before: before3 },
-              end: { pos: Order.MAX_POSITION, before: true },
+              end: Anchors.MAX_ANCHOR,
               format: {},
             },
           ]);
@@ -842,7 +847,7 @@ describe("TimestampFormatting", () => {
             for (const before3 of [true, false]) {
               formatting.clear();
               const mark1 = formatting.newMark(
-                { pos: Order.MIN_POSITION, before: false },
+                Anchors.MIN_ANCHOR,
                 { pos: poss[6], before: before1 },
                 "url",
                 "www1"
@@ -859,7 +864,7 @@ describe("TimestampFormatting", () => {
               const changes = formatting.addMark(mark1);
               assert.deepStrictEqual(formatting.formattedSpans(), [
                 {
-                  start: { pos: Order.MIN_POSITION, before: false },
+                  start: Anchors.MIN_ANCHOR,
                   end: { pos: poss[3], before: before2 },
                   format: { url: "www1" },
                 },
@@ -870,13 +875,13 @@ describe("TimestampFormatting", () => {
                 },
                 {
                   start: { pos: poss[9], before: before3 },
-                  end: { pos: Order.MAX_POSITION, before: true },
+                  end: Anchors.MAX_ANCHOR,
                   format: {},
                 },
               ]);
               assert.deepStrictEqual(changes, [
                 {
-                  start: { pos: Order.MIN_POSITION, before: false },
+                  start: Anchors.MIN_ANCHOR,
                   end: { pos: poss[3], before: before2 },
                   key: "url",
                   value: "www1",
@@ -892,7 +897,7 @@ describe("TimestampFormatting", () => {
 
       test("add and delete", () => {
         const mark1 = formatting.newMark(
-          { pos: Order.MIN_POSITION, before: false },
+          Anchors.MIN_ANCHOR,
           { pos: poss[6], before: true },
           "url",
           "www1"
@@ -915,13 +920,13 @@ describe("TimestampFormatting", () => {
         formatting.addMark(mark3);
         assert.deepStrictEqual(formatting.formattedSpans(), [
           {
-            start: { pos: Order.MIN_POSITION, before: false },
+            start: Anchors.MIN_ANCHOR,
             end: { pos: poss[9], before: false },
             format: { url: "www1" },
           },
           {
             start: { pos: poss[9], before: false },
-            end: { pos: Order.MAX_POSITION, before: true },
+            end: Anchors.MAX_ANCHOR,
             format: {},
           },
         ]);
@@ -930,7 +935,7 @@ describe("TimestampFormatting", () => {
         const changes1 = formatting.deleteMark(mark3);
         assert.deepStrictEqual(formatting.formattedSpans(), [
           {
-            start: { pos: Order.MIN_POSITION, before: false },
+            start: Anchors.MIN_ANCHOR,
             end: { pos: poss[3], before: true },
             format: { url: "www1" },
           },
@@ -941,7 +946,7 @@ describe("TimestampFormatting", () => {
           },
           {
             start: { pos: poss[9], before: false },
-            end: { pos: Order.MAX_POSITION, before: true },
+            end: Anchors.MAX_ANCHOR,
             format: {},
           },
         ]);
@@ -960,7 +965,7 @@ describe("TimestampFormatting", () => {
         const changes2 = formatting.deleteMark(mark1);
         assert.deepStrictEqual(formatting.formattedSpans(), [
           {
-            start: { pos: Order.MIN_POSITION, before: false },
+            start: Anchors.MIN_ANCHOR,
             end: { pos: poss[3], before: true },
             format: {},
           },
@@ -971,13 +976,13 @@ describe("TimestampFormatting", () => {
           },
           {
             start: { pos: poss[9], before: false },
-            end: { pos: Order.MAX_POSITION, before: true },
+            end: Anchors.MAX_ANCHOR,
             format: {},
           },
         ]);
         assert.deepStrictEqual(changes2, [
           {
-            start: { pos: Order.MIN_POSITION, before: false },
+            start: Anchors.MIN_ANCHOR,
             end: { pos: poss[3], before: true },
             key: "url",
             value: null,
@@ -990,7 +995,7 @@ describe("TimestampFormatting", () => {
         const changes3 = formatting.addMark(mark3);
         assert.deepStrictEqual(formatting.formattedSpans(), [
           {
-            start: { pos: Order.MIN_POSITION, before: false },
+            start: Anchors.MIN_ANCHOR,
             end: { pos: poss[3], before: true },
             format: {},
           },
@@ -1001,7 +1006,7 @@ describe("TimestampFormatting", () => {
           },
           {
             start: { pos: poss[9], before: false },
-            end: { pos: Order.MAX_POSITION, before: true },
+            end: Anchors.MAX_ANCHOR,
             format: {},
           },
         ]);
@@ -1067,7 +1072,7 @@ describe("TimestampFormatting", () => {
           }
           assert.deepStrictEqual(formatting.formattedSpans(), [
             {
-              start: { pos: Order.MIN_POSITION, before: false },
+              start: Anchors.MIN_ANCHOR,
               end: { pos: poss[1], before: true },
               format: {},
             },
@@ -1078,7 +1083,7 @@ describe("TimestampFormatting", () => {
             },
             {
               start: { pos: poss[5], before: true },
-              end: { pos: Order.MAX_POSITION, before: true },
+              end: Anchors.MAX_ANCHOR,
               format: {},
             },
           ]);
@@ -1113,7 +1118,7 @@ describe("TimestampFormatting", () => {
         const winner = allMarksSorted.at(-1)!;
         assert.deepStrictEqual(formatting.formattedSpans(), [
           {
-            start: { pos: Order.MIN_POSITION, before: false },
+            start: Anchors.MIN_ANCHOR,
             end: { pos: poss[1], before: true },
             format: {},
           },
@@ -1124,7 +1129,7 @@ describe("TimestampFormatting", () => {
           },
           {
             start: { pos: poss[5], before: true },
-            end: { pos: Order.MAX_POSITION, before: true },
+            end: Anchors.MAX_ANCHOR,
             format: {},
           },
         ]);
@@ -1138,7 +1143,7 @@ describe("TimestampFormatting", () => {
             for (const before3 of [true, false]) {
               formatting.clear();
               const mark1 = formatting.newMark(
-                { pos: Order.MIN_POSITION, before: false },
+                Anchors.MIN_ANCHOR,
                 { pos: poss[6], before: before1 },
                 "url",
                 "www1"
@@ -1154,7 +1159,7 @@ describe("TimestampFormatting", () => {
               const changes = formatting.addMark(mark2);
               assert.deepStrictEqual(formatting.formattedSpans(), [
                 {
-                  start: { pos: Order.MIN_POSITION, before: false },
+                  start: Anchors.MIN_ANCHOR,
                   end: { pos: poss[3], before: before2 },
                   format: { url: "www1" },
                 },
@@ -1170,7 +1175,7 @@ describe("TimestampFormatting", () => {
                 },
                 {
                   start: { pos: poss[9], before: before3 },
-                  end: { pos: Order.MAX_POSITION, before: true },
+                  end: Anchors.MAX_ANCHOR,
                   format: {},
                 },
               ]);
@@ -1221,7 +1226,7 @@ describe("TimestampFormatting", () => {
               const changes = formatting.addMark(mark2);
               assert.deepStrictEqual(formatting.formattedSpans(), [
                 {
-                  start: { pos: Order.MIN_POSITION, before: false },
+                  start: Anchors.MIN_ANCHOR,
                   end: { pos: poss[3], before: before2 },
                   format: {},
                 },
@@ -1237,7 +1242,7 @@ describe("TimestampFormatting", () => {
                 },
                 {
                   start: { pos: poss[9], before: before3 },
-                  end: { pos: Order.MAX_POSITION, before: true },
+                  end: Anchors.MAX_ANCHOR,
                   format: {},
                 },
               ]);
@@ -1270,7 +1275,7 @@ describe("TimestampFormatting", () => {
           for (const before2 of [true, false]) {
             formatting.clear();
             const mark1 = formatting.newMark(
-              { pos: Order.MIN_POSITION, before: false },
+              Anchors.MIN_ANCHOR,
               { pos: poss[6], before: before1 },
               "url",
               "www1"
@@ -1286,7 +1291,7 @@ describe("TimestampFormatting", () => {
             const changes = formatting.addMark(mark2);
             assert.deepStrictEqual(formatting.formattedSpans(), [
               {
-                start: { pos: Order.MIN_POSITION, before: false },
+                start: Anchors.MIN_ANCHOR,
                 end: { pos: poss[3], before: before2 },
                 format: { url: "www1" },
               },
@@ -1297,7 +1302,7 @@ describe("TimestampFormatting", () => {
               },
               {
                 start: { pos: poss[6], before: before1 },
-                end: { pos: Order.MAX_POSITION, before: true },
+                end: Anchors.MAX_ANCHOR,
                 format: {},
               },
             ]);
@@ -1322,7 +1327,7 @@ describe("TimestampFormatting", () => {
           for (const before3 of [true, false]) {
             formatting.clear();
             const mark1 = formatting.newMark(
-              { pos: Order.MIN_POSITION, before: false },
+              Anchors.MIN_ANCHOR,
               { pos: poss[6], before: before1 },
               "url",
               "www1"
@@ -1338,7 +1343,7 @@ describe("TimestampFormatting", () => {
             const changes = formatting.addMark(mark2);
             assert.deepStrictEqual(formatting.formattedSpans(), [
               {
-                start: { pos: Order.MIN_POSITION, before: false },
+                start: Anchors.MIN_ANCHOR,
                 end: { pos: poss[6], before: before1 },
                 format: { url: "www1" },
               },
@@ -1349,7 +1354,7 @@ describe("TimestampFormatting", () => {
               },
               {
                 start: { pos: poss[9], before: before3 },
-                end: { pos: Order.MAX_POSITION, before: true },
+                end: Anchors.MAX_ANCHOR,
                 format: {},
               },
             ]);
@@ -1390,7 +1395,7 @@ describe("TimestampFormatting", () => {
             const changes = formatting.addMark(mark2);
             assert.deepStrictEqual(formatting.formattedSpans(), [
               {
-                start: { pos: Order.MIN_POSITION, before: false },
+                start: Anchors.MIN_ANCHOR,
                 end: { pos: poss[3], before: true },
                 format: {},
               },
@@ -1411,7 +1416,7 @@ describe("TimestampFormatting", () => {
               },
               {
                 start: { pos: poss[9], before: before3 },
-                end: { pos: Order.MAX_POSITION, before: true },
+                end: Anchors.MAX_ANCHOR,
                 format: {},
               },
             ]);
@@ -1468,7 +1473,7 @@ describe("TimestampFormatting", () => {
             const changes = formatting.addMark(mark2);
             assert.deepStrictEqual(formatting.formattedSpans(), [
               {
-                start: { pos: Order.MIN_POSITION, before: false },
+                start: Anchors.MIN_ANCHOR,
                 end: { pos: poss[3], before: true },
                 format: {},
               },
@@ -1489,7 +1494,7 @@ describe("TimestampFormatting", () => {
               },
               {
                 start: { pos: poss[9], before: before3 },
-                end: { pos: Order.MAX_POSITION, before: true },
+                end: Anchors.MAX_ANCHOR,
                 format: {},
               },
             ]);
@@ -1520,7 +1525,7 @@ describe("TimestampFormatting", () => {
         for (const before2 of [true, false]) {
           formatting.clear();
           const mark1 = formatting.newMark(
-            { pos: Order.MIN_POSITION, before: false },
+            Anchors.MIN_ANCHOR,
             { pos: poss[6], before: false },
             "url",
             "www1"
@@ -1536,7 +1541,7 @@ describe("TimestampFormatting", () => {
           const changes = formatting.addMark(mark2);
           assert.deepStrictEqual(formatting.formattedSpans(), [
             {
-              start: { pos: Order.MIN_POSITION, before: false },
+              start: Anchors.MIN_ANCHOR,
               end: { pos: poss[3], before: before2 },
               format: { url: "www1" },
             },
@@ -1552,7 +1557,7 @@ describe("TimestampFormatting", () => {
             },
             {
               start: { pos: poss[6], before: false },
-              end: { pos: Order.MAX_POSITION, before: true },
+              end: Anchors.MAX_ANCHOR,
               format: {},
             },
           ]);
@@ -1574,7 +1579,7 @@ describe("TimestampFormatting", () => {
         for (const before2 of [true, false]) {
           formatting.clear();
           const mark1 = formatting.newMark(
-            { pos: Order.MIN_POSITION, before: false },
+            Anchors.MIN_ANCHOR,
             // Booleans are flipped relative to "same end pos 1".
             { pos: poss[6], before: true },
             "url",
@@ -1591,7 +1596,7 @@ describe("TimestampFormatting", () => {
           const changes = formatting.addMark(mark2);
           assert.deepStrictEqual(formatting.formattedSpans(), [
             {
-              start: { pos: Order.MIN_POSITION, before: false },
+              start: Anchors.MIN_ANCHOR,
               end: { pos: poss[3], before: before2 },
               format: { url: "www1" },
             },
@@ -1607,7 +1612,7 @@ describe("TimestampFormatting", () => {
             },
             {
               start: { pos: poss[6], before: false },
-              end: { pos: Order.MAX_POSITION, before: true },
+              end: Anchors.MAX_ANCHOR,
               format: {},
             },
           ]);
@@ -1637,7 +1642,7 @@ describe("TimestampFormatting", () => {
         for (const before3 of [true, false]) {
           formatting.clear();
           const mark1 = formatting.newMark(
-            { pos: Order.MIN_POSITION, before: false },
+            Anchors.MIN_ANCHOR,
             { pos: poss[3], before: true },
             "url",
             "www1"
@@ -1653,7 +1658,7 @@ describe("TimestampFormatting", () => {
           const changes = formatting.addMark(mark2);
           assert.deepStrictEqual(formatting.formattedSpans(), [
             {
-              start: { pos: Order.MIN_POSITION, before: false },
+              start: Anchors.MIN_ANCHOR,
               end: { pos: poss[3], before: true },
               format: { url: "www1" },
             },
@@ -1669,7 +1674,7 @@ describe("TimestampFormatting", () => {
             },
             {
               start: { pos: poss[9], before: before3 },
-              end: { pos: Order.MAX_POSITION, before: true },
+              end: Anchors.MAX_ANCHOR,
               format: {},
             },
           ]);
@@ -1691,7 +1696,7 @@ describe("TimestampFormatting", () => {
         for (const before3 of [true, false]) {
           formatting.clear();
           const mark1 = formatting.newMark(
-            { pos: Order.MIN_POSITION, before: false },
+            Anchors.MIN_ANCHOR,
             // Booleans are flipped relative to "same start/end pos 1".
             { pos: poss[3], before: false },
             "url",
@@ -1708,7 +1713,7 @@ describe("TimestampFormatting", () => {
           const changes = formatting.addMark(mark2);
           assert.deepStrictEqual(formatting.formattedSpans(), [
             {
-              start: { pos: Order.MIN_POSITION, before: false },
+              start: Anchors.MIN_ANCHOR,
               end: { pos: poss[3], before: true },
               format: { url: "www1" },
             },
@@ -1724,7 +1729,7 @@ describe("TimestampFormatting", () => {
             },
             {
               start: { pos: poss[9], before: before3 },
-              end: { pos: Order.MAX_POSITION, before: true },
+              end: Anchors.MAX_ANCHOR,
               format: {},
             },
           ]);
@@ -1756,8 +1761,8 @@ describe("TimestampFormatting", () => {
       assert.throws(() => {
         formatting.addMark(
           formatting.newMark(
-            { pos: Order.MAX_POSITION, before: true },
-            { pos: Order.MIN_POSITION, before: false },
+            Anchors.MAX_ANCHOR,
+            Anchors.MIN_ANCHOR,
             "italic",
             true
           )
@@ -1767,7 +1772,7 @@ describe("TimestampFormatting", () => {
         formatting.addMark(
           formatting.newMark(
             { pos: poss[3], before: true },
-            { pos: Order.MIN_POSITION, before: false },
+            Anchors.MIN_ANCHOR,
             "italic",
             true
           )
@@ -1908,7 +1913,7 @@ describe("TimestampFormatting", () => {
       ]);
       assert.deepStrictEqual(alice.formattedSpans(), [
         {
-          start: { pos: Order.MIN_POSITION, before: false },
+          start: Anchors.MIN_ANCHOR,
           end: { pos: poss[1], before: true },
           format: {},
         },
@@ -1929,7 +1934,7 @@ describe("TimestampFormatting", () => {
         },
         {
           start: { pos: poss[9], before: true },
-          end: { pos: Order.MAX_POSITION, before: true },
+          end: Anchors.MAX_ANCHOR,
           format: {},
         },
       ]);
@@ -2004,7 +2009,7 @@ describe("TimestampFormatting", () => {
       ]);
       assert.deepStrictEqual(alice.formattedSpans(), [
         {
-          start: { pos: Order.MIN_POSITION, before: false },
+          start: Anchors.MIN_ANCHOR,
           end: { pos: poss[1], before: true },
           format: {},
         },
@@ -2015,7 +2020,7 @@ describe("TimestampFormatting", () => {
         },
         {
           start: { pos: poss[9], before: true },
-          end: { pos: Order.MAX_POSITION, before: true },
+          end: Anchors.MAX_ANCHOR,
           format: {},
         },
       ]);

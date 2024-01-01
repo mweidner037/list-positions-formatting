@@ -1,6 +1,33 @@
 import { LexList, List, Order, Outline } from "list-positions";
-import type { Anchor } from "./formatting";
+import { Anchor, Anchors } from "./anchor";
 
+// Helper functions.
+// See RichList for example usage.
+
+/**
+ * Returns a span `{ start: Anchor, end: Anchor }` that covers precisely
+ * the given slice of list. The startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+ *
+ * The span covers all positions from
+ * `list.positionAt(startIndex)` to `list.positionAt(endIndex - 1)` inclusive,
+ * including positions that are not currently present in list.
+ * It may also "expand" to cover not-currently-present positions at
+ * the slice's endpoints, depending on the value of `expand`.
+ *
+ * @param expand Whether the span covers not-currently-present positions at
+ * the slice's endpoints.
+ * - "after" (default): The span expands to cover positions at the end, i.e.,
+ * between `list.positionAt(endIndex - 1)` and `list.positionAt(endIndex)`.
+ * This is the typical behavior for most rich-text format keys (e.g. bold): the
+ * formatting also affects future (& concurrent) characters inserted at the end.
+ * - "before": Expands to cover positions at the beginning, i.e.,
+ * between `list.positionAt(startIndex - 1)` and `list.positionAt(startIndex)`.
+ * - "both": Combination of "before" and "after".
+ * - "none": Does not expand.
+ * This is the typical behavior for certain rich-text format keys, such as hyperlinks.
+ *
+ * @throws If startIndex >= endIndex (the slice is empty).
+ */
 export function spanFromSlice(
   list: List<unknown> | LexList<unknown> | Outline,
   startIndex: number,
@@ -40,38 +67,33 @@ export function spanFromSlice(
 
 // Note: might return trivial slice (same start and end).
 // But spanFromSlice won't accept that. TODO: accept it?
+/**
+ * Projects the span `{ start: Anchor, end: Anchor }` onto the given list,
+ * returning the slice that it currently covers.
+ *
+ * The slice is expressed in terms of its startIndex and endIndex
+ * (endIndex not included), like arguments to [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+ */
 export function sliceFromSpan(
   list: List<unknown> | LexList<unknown> | Outline,
   start: Anchor,
   end: Anchor
 ): { startIndex: number; endIndex: number } {
   return {
-    startIndex: indexOfAnchor(list, start),
-    endIndex: indexOfAnchor(list, end),
+    startIndex: Anchors.indexOfAnchor(list, start),
+    endIndex: Anchors.indexOfAnchor(list, end),
   };
 }
 
 /**
- * Returns the next index after anchor in list,
- * or `list.length` if anchor is after all present positions.
+ * Returns a map of format changes needed to turn `format` into `current`.
  *
- * You can use this function to convert either endpoint of a span
- * to the corresponding slice endpoint (see sliceFromSpan).
- */
-export function indexOfAnchor(
-  list: List<unknown> | LexList<unknown> | Outline,
-  anchor: Anchor
-): number {
-  const posList = list instanceof LexList ? list.list : list;
-  return anchor.before
-    ? posList.indexOfPosition(anchor.pos, "right")
-    : posList.indexOfPosition(anchor.pos, "left") + 1;
-}
-
-/**
- * Returns changes (including null for deletions) to turn current into target.
+ * Usually, you will create a new mark for each key-value pair in the returned map.
+ * Note that the map may contain null
+ * values; when used in marks, these delete their keys.
  *
- * null values are ignored (treated as not present).
+ * See also: RichList.insertWithFormat, which uses this function to ensure that
+ * newly-inserted values have the desired format.
  */
 export function diffFormats(
   current: Record<string, any>,

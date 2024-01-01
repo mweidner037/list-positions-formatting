@@ -2,7 +2,7 @@ import { assert } from "chai";
 import { BunchIDs, Order } from "list-positions";
 import { beforeEach, describe, test } from "mocha";
 import seedrandom from "seedrandom";
-import { RichList } from "../src";
+import { Anchors, RichList } from "../src";
 
 describe("RichList", () => {
   let rng!: seedrandom.prng;
@@ -99,7 +99,7 @@ describe("RichList", () => {
       assert.deepStrictEqual(createdMarks, [
         {
           start: { pos: startPos, before: true },
-          end: { pos: Order.MAX_POSITION, before: true },
+          end: Anchors.MAX_ANCHOR,
           key: "bold",
           value: true,
           creatorID: "alice",
@@ -333,7 +333,7 @@ describe("RichList", () => {
       ]);
       assert.deepStrictEqual(createdMark, {
         start: { pos: alice.list.positionAt(0), before: true },
-        end: { pos: Order.MAX_POSITION, before: true },
+        end: Anchors.MAX_ANCHOR,
         key: "bold",
         value: true,
         creatorID: "alice",
@@ -350,7 +350,7 @@ describe("RichList", () => {
         },
         {
           start: { pos: alice.list.positionAt(8), before: true },
-          end: { pos: Order.MAX_POSITION, before: true },
+          end: Anchors.MAX_ANCHOR,
           key: "bold",
           value: true,
           previousValue: null,

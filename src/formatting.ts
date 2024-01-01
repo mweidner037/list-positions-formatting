@@ -212,7 +212,7 @@ export class Formatting<M extends IMark> {
       for (let i = list.length - 1; i >= minus10; i--) {
         if (this.compareMarks(mark, list[i]) > 0) return i + 1;
       }
-      // If we get here, the mark is == minus10. TODO: check.
+      // If we get here, the mark is == minus10.
       return minus10;
     } else {
       // Binary search the marks at index < minus10. Using
@@ -351,9 +351,6 @@ export class Formatting<M extends IMark> {
 
       if (data.before !== undefined) {
         // Deep copy.
-        // TODO: use shallow copy at first and clone-on-write?
-        // For the keys that aren't changing.
-        // (Would it make sense to have a different formatList per key?)
         data.after = new Map();
         for (const [key, marks] of data.before) {
           data.after.set(key, marks.slice());
@@ -374,9 +371,6 @@ export class Formatting<M extends IMark> {
     const toCopy = prevData.after ?? prevData.before!;
     const copy = new Map<string, M[]>();
     for (const [key, marks] of toCopy) {
-      // TODO: use shallow copy at first and clone-on-write?
-      // For the keys that aren't changing.
-      // (Would it make sense to have a different formatList per key?)
       copy.set(key, marks.slice());
     }
     return copy;
@@ -601,7 +595,6 @@ export class Formatting<M extends IMark> {
     return this.formattedSpans()[Symbol.iterator]();
   }
 
-  // TODO: slice args? E.g. so you can clear/overwrite a range's format.
   /**
    * Returns an efficient representation of our current Formatting state,
    * independent of a specific list.
@@ -638,7 +631,6 @@ export class Formatting<M extends IMark> {
     }));
   }
 
-  // TODO: slice args?
   /**
    * Returns an efficient representation of the given list's formatting,
    * according to our current Formatting state.
@@ -649,8 +641,6 @@ export class Formatting<M extends IMark> {
   formattedSlices(
     list: List<unknown> | LexList<unknown> | Outline
   ): FormattedSlice[] {
-    // TODO: Stop formattedSpans early if we reach the end of list, using slice args.
-    // Or at least break once endIndex == length, to save on indexOfAnchor calls.
     const slices: FormattedSlice[] = [];
     let prevSlice: FormattedSlice | null = null;
     for (const span of this.formattedSpans()) {
@@ -703,9 +693,6 @@ export class Formatting<M extends IMark> {
    */
   load(savedState: FormattingSavedState<M>): void {
     this.clear();
-
-    // TODO: can we do this more efficiently?
-    // Skipping change computation; exploiting order.
     for (const mark of savedState) this.addMark(mark);
   }
 }

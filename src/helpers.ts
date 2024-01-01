@@ -65,8 +65,6 @@ export function spanFromSlice(
   return { start, end };
 }
 
-// Note: might return trivial slice (same start and end).
-// But spanFromSlice won't accept that. TODO: accept it?
 /**
  * Projects the span `{ start: Anchor, end: Anchor }` onto the given list,
  * returning the slice that it currently covers.

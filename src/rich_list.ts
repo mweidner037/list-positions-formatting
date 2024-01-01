@@ -274,8 +274,6 @@ export class RichList<T> {
     const mark = this.formatting.newMark(start, end, key, value);
     const changes = this.formatting.addMark(mark);
     this.onCreateMark?.(mark);
-    // TODO: return index version of changes instead? If you need the spans,
-    // you can DIY.
     return [mark, changes];
   }
 
@@ -307,7 +305,6 @@ export class RichList<T> {
     return this.formattedValues()[Symbol.iterator]();
   }
 
-  // TODO: slice args?
   /**
    * Returns an efficient representation of this RichList's values and their current
    * formatting.

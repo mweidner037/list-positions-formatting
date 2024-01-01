@@ -65,7 +65,7 @@ interface IMark {
 }
 ```
 
-### From marks to formatting
+### From Marks to Formatting
 
 A given list can have many marks, often overlapping with each other. The current set of marks determines the list's current format.
 
@@ -84,9 +84,26 @@ Formally, given the current set of marks, the current format at a position `pos`
 
 The null-value rule lets you delete a format key: for example, to change a range's format from `{ bold: true }` to `{}` (unbolding), add a new, winning mark with `mark.key = "bold"` and `mark.value = null`.
 
-### "Expand" behavior
+### Expand Behavior
 
-TODO - can copy from helpers.ts docs.
+(Docs under construction)
+
+<!-- TODO
+The span covers all positions from
+ `list.positionAt(startIndex)` to `list.positionAt(endIndex - 1)` inclusive,
+ including positions that are not currently present in list.
+ It may also "expand" to cover not-currently-present positions at
+ the slice's endpoints, depending on the value of `expand`.
+
+ @param expand How the span affects not-currently-present positions at
+ the slice's endpoints.
+ - "after" (default): The span expands to cover positions at the end, i.e.,
+ between `list.positionAt(endIndex - 1)` and `list.positionAt(endIndex)`.
+ This is how most marks (e.g. bold) usually behave in rich-text editors.
+ - "before": Expands to cover positions at the beginning, i.e.,
+ between `list.positionAt(startIndex - 1)` and `list.positionAt(startIndex)`
+ - "both": Combination of "after" and "before".
+ - "none": Does not expand. This is how hyperlinks usually behave in rich-text editors. -->
 
 ## API
 
@@ -109,7 +126,7 @@ Misc features:
 
 **Warning:** Similar to list-positions's List class, you must [manage metadata](https://github.com/mweidner037/list-positions#managing-metadata) for a Formatting instance. Typically, you're already managing metadata for a List/Outline/LexList storing your actual values; it is then sufficient to share that list's `Order` with your Formatting instance, via the `order` constructor argument.
 
-### TimestampFormatting
+### Class TimestampFormatting
 
 Subclass of `Formatting` that chooses a reasonable default sort order.
 
@@ -131,11 +148,11 @@ To create a TimestampMark, use `TimestampFormatting.newMark`.
 
 TimestampFormatting's sort order uses [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp), with ties broken by `creatorID`. This sort order works well in general, including in collaborative settings with or without a central server.
 
-### RichList
+### Class RichList
 
 Convenience wrapper for a List with TimestampFormatting.
 
-RichList has an API more similar to a traditional rich-text data structure, combining indexed access, values, and formatting in a single object. E.g., it has a `getFormatAt(index)` method.
+RichList has an API similar to a traditional rich-text data structure, combining indexed access, values, and formatting in a single object. E.g., it has a `getFormatAt(index)` method.
 
 Notable methods:
 
@@ -157,6 +174,6 @@ If you don't want to use RichList (e.g., because you are using an Outline instea
 
 ## Performance
 
-<!-- TODO -->
+<!-- TODO: benchmarks -->
 
 Benchmarks are to-do. However, this library's implementation is similar to [Collabs's](https://collabs.readthedocs.io/en/latest/) [CRichText](https://collabs.readthedocs.io/en/latest/api/collabs/classes/CRichText.html) and should have similar speed and metadata overhead. Cloud benchmarks showed that Collabs could handle [100+ simultaneous active users](https://arxiv.org/abs/2212.02618) in a collaborative rich-text editor with frequent formatting operations, exceeding Google Docs' scalability.

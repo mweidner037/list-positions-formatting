@@ -61,9 +61,15 @@ export type RichListSavedState<T> = {
 };
 
 /**
- * TODO
+ * Convenience wrapper for a List with TimestampFormatting.
  *
- * For ops that only involve list or formatting, do it directly on them.
+ * See [RichList](https://github.com/mweidner037/list-formatting#class-richlist) in the readme.
+ *
+ * RichList has an API similar to a traditional rich-text data structure,
+ * combining indexed access, values, and formatting in a single object.
+ *
+ * For operations that only involve `this.list` or `this.formatting`, call methods
+ * on them directly.
  */
 export class RichList<T> {
   /**
@@ -111,7 +117,7 @@ export class RichList<T> {
   /**
    * Constructs a RichList.
    *
-   * @param options.expandRules The [expand](TODO: readme link) behavior
+   * @param options.expandRules The [expand behavior](https://github.com/mweidner037/list-formatting#expand-behavior)
    * to use for new marks created by `insertWithFormat` and `format`.
    * It inputs the mark's key and value. Default: Always returns "after".
    * @param options.order The Order to use for `this.order`. Both `this.list`
@@ -218,9 +224,10 @@ export class RichList<T> {
       createdMarks.push(mark);
     }
 
-    // We don't return the FormatChanges because you can infer them from
-    // createdMarks: the created marks will never lose to an existing mark,
-    // so each changes its whole span, with previousValue TODO: null or might be an existing value.
+    // We don't return the FormatChanges because they are not really needed
+    // (you already know what the final format will be) and a bit confusing
+    // (format props don't all match the final format; only make sense in order even
+    // though marks commute). If you need them, you can add the marks yourself.
     return [startPos, createdBunch, createdMarks];
   }
 
@@ -230,8 +237,8 @@ export class RichList<T> {
    *
    * This method always creates a new mark, even if it is redundant.
    *
-   * @param expand The new mark's [expand](TODO: readme link) behavior.
-   * If not provided, defaults to the constructor's `options.expandRules`.
+   * @param expand The new mark's [expand behavior](https://github.com/mweidner037/list-formatting#expand-behavior).
+   * If not provided, defaults to calling the constructor's `options.expandRules`.
    * @returns [created mark, non-redundant format changes]
    */
   format(

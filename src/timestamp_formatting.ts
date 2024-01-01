@@ -79,7 +79,18 @@ function compareTimestampMarks(a: TimestampMark, b: TimestampMark): number {
 export type TimestampFormattingSavedState = FormattingSavedState<TimestampMark>;
 
 /**
- * TODO
+ * A local data structure storing a set of marks.
+ *
+ * This class is the same as [Formatting](https://github.com/mweidner037/list-formatting#class-formatting)
+ * except that it chooses a reasonable
+ * default sort order, on marks of type TimestampMark.
+ *
+ * Mutate the set using `addMark(mark)` and `deleteMark(mark)`.
+ * Other methods let you query the formatting resulting from the current set of marks.
+ *
+ * The sort order uses [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp),
+ * with ties broken by `creatorID`. This sort order works well in general,
+ * including in collaborative settings with or without a central server.
  */
 export class TimestampFormatting extends Formatting<TimestampMark> {
   /**

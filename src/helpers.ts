@@ -8,22 +8,21 @@ import { Anchor, Anchors } from "./anchor";
  * Returns a span `{ start: Anchor, end: Anchor }` that covers precisely
  * the given slice of list. The startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
  *
- * TODO: move expand desc to readme and link here?
  * The span covers all positions from
  * `list.positionAt(startIndex)` to `list.positionAt(endIndex - 1)` inclusive,
  * including positions that are not currently present in list.
  * It may also "expand" to cover not-currently-present positions at
- * the slice's endpoints, depending on the value of `expand`.
+ * the slice's endpoints, depending on the value of `expand`; see
+ * [Expand Behavior](https://github.com/mweidner037/list-formatting#expand-behavior) in the readme.
  *
- * @param expand How the span affects not-currently-present positions at
+ * @param expand Whether the span covers not-currently-present positions at
  * the slice's endpoints.
  * - "after" (default): The span expands to cover positions at the end, i.e.,
  * between `list.positionAt(endIndex - 1)` and `list.positionAt(endIndex)`.
- * This is how most marks (e.g. bold) usually behave in rich-text editors.
  * - "before": Expands to cover positions at the beginning, i.e.,
  * between `list.positionAt(startIndex - 1)` and `list.positionAt(startIndex)`
- * - "both": Combination of "after" and "before".
- * - "none": Does not expand. This is how hyperlinks usually behave in rich-text editors.
+ * - "both": Combination of "before" and "after".
+ * - "none": Does not expand.
  *
  * @throws If startIndex >= endIndex (the slice is empty).
  */

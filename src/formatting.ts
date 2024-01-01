@@ -9,11 +9,15 @@ import {
 import { Anchor, Anchors } from "./anchor";
 
 /**
- * TODO
- * Missing metadata needed for comparison,
- * e.g., a Lamport timestamp. Hence why I.
+ * An inline formatting mark, i.e., an instruction to change the format of a
+ * range of values.
  *
- * See TimestampMark, used with TimestampFormatting.
+ * See [Marks](https://github.com/mweidner037/list-formatting#marks) in the readme.
+ *
+ * IMark is an interface that a concrete mark type should implement, extending it
+ * with extra fields used by its `compareMarks` function.
+ * For a default implementation,
+ * see TimestampMark, used with the TimestampFormatting class.
  */
 export interface IMark {
   /**
@@ -133,9 +137,15 @@ export type FormatChange = {
 export type FormattingSavedState<M extends IMark> = M[];
 
 /**
- * TODO
+ * A local data structure storing a set of marks.
  *
- * See TimestampFormatting.
+ * See [Formatting](https://github.com/mweidner037/list-formatting#class-formatting) in the readme.
+ *
+ * Mutate the set using `addMark(mark)` and `deleteMark(mark)`.
+ * Other methods let you query the formatting resulting from the current set of marks.
+ *
+ * See also: TimestampFormatting, a subclass that chooses a reasonable default
+ * sort order and mark type (TimestampMark).
  */
 export class Formatting<M extends IMark> {
   /**

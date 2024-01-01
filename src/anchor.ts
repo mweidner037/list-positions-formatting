@@ -5,13 +5,14 @@ import { LexList, List, Order, Outline, Position } from "list-positions";
  *
  * An *anchor* is a spot immediately before or after a
  * [position](https://github.com/mweidner037/list-positions#about).
- * See TODO: readme picture.
+ * See [Anchors](https://github.com/mweidner037/list-formatting#anchors) in the readme.
  *
  * Each formatting mark starts and ends at an anchor.
  * Using anchors instead of positions lets the mark choose whether it "expands"
  * to include new positions before/after its original range.
  *
- * See also: [Utilities](TODO:readme section) for working with Anchors.
+ * See also: [Utilities](https://github.com/mweidner037/list-formatting#utilities)
+ * for working with Anchors.
  */
 export type Anchor = {
   /**

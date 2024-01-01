@@ -22,37 +22,37 @@ export type TimestampMark = {
   /**
    * The mark's starting anchor.
    */
-  start: Anchor;
+  readonly start: Anchor;
   /**
    * The mark's ending anchor.
    */
-  end: Anchor;
+  readonly end: Anchor;
   /**
    * The mark's format key.
    */
-  key: string;
+  readonly key: string;
   /**
    * The mark's format value.
    *
    * A null value deletes key, causing it to no longer appear in
    * format objects. Any other value appears as-is in format objects.
    */
-  value: any;
+  readonly value: any;
   /**
    * The replicaID of the TimestampFormatting instance that created this mark
    * (via `TimestampFormatting.newMark`).
    */
-  creatorID: string;
+  readonly creatorID: string;
   /**
    * The mark's [Lamport timestamp](https://en.wikipedia.org/wiki/Lamport_timestamp).
    *
    * Marks are sorted by this timestamp, with ties broken using the lexicographic
    * order on creatorIDs.
-   * 
+   *
    * This field is always a positive integer. Note that timestamps might not
    * be assigned consecutively for the same creatorID.
    */
-  timestamp: number;
+  readonly timestamp: number;
 };
 
 /**

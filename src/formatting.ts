@@ -47,18 +47,18 @@ export type FormattedSpan = {
   /**
    * The span's starting anchor.
    */
-  start: Anchor;
+  readonly start: Anchor;
   /**
    * The span's ending anchor.
    */
-  end: Anchor;
+  readonly end: Anchor;
   /**
    * The common format for all Positions that fall within the span.
    *
    * The format applies to a Position regardless of its membership in any
    * particular list.
    */
-  format: Record<string, any>;
+  readonly format: Record<string, any>;
 };
 
 /**
@@ -71,11 +71,11 @@ export type FormattedSlice = {
   /**
    * The slice's starting index (inclusive).
    */
-  startIndex: number;
+  readonly startIndex: number;
   /**
    * The slice's ending index (exclusive).
    */
-  endIndex: number;
+  readonly endIndex: number;
   /**
    * The common format for all of the slice's values.
    *
@@ -83,7 +83,7 @@ export type FormattedSlice = {
    * currently present in the target list, even if they lie between
    * slice's endpoints' Positions.
    */
-  format: Record<string, any>;
+  readonly format: Record<string, any>;
 };
 
 /**
@@ -93,29 +93,29 @@ export type FormatChange = {
   /**
    * The span's starting anchor.
    */
-  start: Anchor;
+  readonly start: Anchor;
   /**
    * The span's ending anchor.
    */
-  end: Anchor;
+  readonly end: Anchor;
   /**
    * The key whose format changed.
    */
-  key: string;
+  readonly key: string;
   /**
    * The new format value, or null if the key was deleted.
    */
-  value: any;
+  readonly value: any;
   /**
    * The previous format value at this span, or null if the key was not previously present.
    */
-  previousValue: any;
+  readonly previousValue: any;
   /**
    * The span's complete new format.
    *
    * Note that this excludes keys with null values, possibly including `this.key`.
    */
-  format: Record<string, any>;
+  readonly format: Record<string, any>;
 };
 
 /**
@@ -141,10 +141,10 @@ export class Formatting<M extends IMark> {
   /**
    * [Compare function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort#comparefn)
    * used for marks in this Formatting.
-   * 
+   *
    * The compareMarks order determines which mark "wins" (i.e., sets its key's current value)
    * when multiple marks cover the same Position.
-   * 
+   *
    * Its implied equality semantics (a equals b if and only if `compareMarks(a, b) === 0`)
    * is also used to check whether an added
    * mark is redundant in `addMark`, and to find the mark to delete
@@ -172,10 +172,7 @@ export class Formatting<M extends IMark> {
    * If not provided, a `new Order()` is used.
    * @param compareMarks The function to use for `this.compareMarks`.
    */
-  constructor(
-    readonly order: Order,
-    compareMarks: (a: M, b: M) => number
-  ) {
+  constructor(readonly order: Order, compareMarks: (a: M, b: M) => number) {
     this.compareMarks = compareMarks;
     // If init logic is changed, also update clear().
     this.orderedMarks = [];
@@ -224,11 +221,11 @@ export class Formatting<M extends IMark> {
 
   /**
    * Adds the given mark to our internal state.
-   * 
+   *
    * Changes to the current winning formatting are returned. These are in list
    * order, but they might not be contiguous and might not cover the mark's
    * entire span, if the given mark loses to existing marks.
-   * 
+   *
    * If the mark is already present, nothing happens. Here equality is tested
    * using compareMarks, *not* by-reference equality.
    */
@@ -399,11 +396,11 @@ export class Formatting<M extends IMark> {
 
   /**
    * Deletes the given mark from our internal state.
-   * 
+   *
    * Changes to the current winning formatting are returned. These are in list
    * order, but they might not be contiguous and might not cover the mark's
    * entire span, if the given mark was losing to other marks.
-   * 
+   *
    * If the mark is already not present, nothing happens. Here equality is tested
    * using compareMarks, *not* by-reference equality.
    */
@@ -584,6 +581,16 @@ export class Formatting<M extends IMark> {
     return prevData.after ?? prevData.before!;
   }
 
+  /**
+   * Iterates over an efficient representation of our current Formatting state,
+   * independent of a specific list.
+   *
+   * Same as `this.formattedSpans()`.
+   */
+  [Symbol.iterator](): IterableIterator<FormattedSpan> {
+    return this.formattedSpans()[Symbol.iterator]();
+  }
+
   // TODO: slice args? E.g. so you can clear/overwrite a range's format.
   /**
    * Returns an efficient representation of our current Formatting state,
@@ -642,7 +649,7 @@ export class Formatting<M extends IMark> {
       if (endIndex !== startIndex) {
         if (prevSlice !== null && equalsRecord(span.format, prevSlice.format)) {
           // Combine sequential slices with the same format.
-          prevSlice.endIndex = endIndex;
+          (prevSlice as { endIndex: number }).endIndex = endIndex;
         } else {
           const slice = { startIndex, endIndex, format: span.format };
           slices.push(slice);

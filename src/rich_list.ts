@@ -7,7 +7,7 @@ import {
   Position,
 } from "list-positions";
 import { Anchors } from "./anchor";
-import { FormatChange } from "./formatting";
+import { FormatChange, FormattedSlice } from "./formatting";
 import { diffFormats, spanFromSlice } from "./helpers";
 import {
   TimestampFormatting,
@@ -25,19 +25,19 @@ export type FormattedValues<T> = {
   /**
    * The slice's starting index (inclusive).
    */
-  startIndex: number;
+  readonly startIndex: number;
   /**
    * The slice's ending index (exclusive).
    */
-  endIndex: number;
+  readonly endIndex: number;
   /**
    * The slice's values, i.e., `richList.list.slice(startIndex, endIndex)`.
    */
-  values: T[];
+  readonly values: T[];
   /**
    * The common format for all of the slice's values.
    */
-  format: Record<string, any>;
+  readonly format: Record<string, any>;
 };
 
 /**
@@ -55,9 +55,9 @@ export type FormattedValues<T> = {
  * - `richList.formatting` (class TimestampFormatting).
  */
 export type RichListSavedState<T> = {
-  order: OrderSavedState;
-  list: ListSavedState<T>;
-  formatting: TimestampFormattingSavedState;
+  readonly order: OrderSavedState;
+  readonly list: ListSavedState<T>;
+  readonly formatting: TimestampFormattingSavedState;
 };
 
 /**
@@ -273,6 +273,16 @@ export class RichList<T> {
     return this.formatting.getFormat(this.list.positionAt(index));
   }
 
+  /**
+   * Iterates over an efficient representation of this RichList's values and their current
+   * formatting.
+   *
+   * Same as `this.formattedValues()`.
+   */
+  [Symbol.iterator](): IterableIterator<FormattedValues<T>> {
+    return this.formattedValues()[Symbol.iterator]();
+  }
+
   // TODO: slice args?
   /**
    * Returns an efficient representation of this RichList's values and their current
@@ -282,14 +292,13 @@ export class RichList<T> {
    * Each object describes a slice of values with a single format.
    */
   formattedValues(): FormattedValues<T>[] {
-    const slices = this.formatting.formattedSlices(this.list);
+    const slices = this.formatting.formattedSlices(
+      this.list
+    ) as (FormattedSlice & { values?: T[] })[];
     const values = this.list.slice();
     for (const slice of slices) {
-      // Okay to modify slice in-place.
-      (slice as FormattedValues<T>).values = values.slice(
-        slice.startIndex,
-        slice.endIndex
-      );
+      // slice only appears here, so it's okay to modify it in-place.
+      slice.values = values.slice(slice.startIndex, slice.endIndex);
     }
     return slices as FormattedValues<T>[];
   }

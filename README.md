@@ -13,10 +13,12 @@ This library complements [list-positions](https://github.com/mweidner037/list-po
 
 Each formatting _mark_ is defined in terms of `Position`s from the list-positions library. So multiple lists can share the same marks, including lists on different devices - enabling DIY collaborative rich-text editing.
 
-<!--
 ### Example Use Cases
 
-1. TODO. Collaborative rich-text editor; suggested changes w/ suggested formats (or just viewing the main list's format applied to the suggestion - can even reuse same Formatting object). -->
+1. Standard collaborative rich-text editing.
+2. In a rich-text editor with suggested changes, you might have separate Lists for the main text and each suggestion. This library lets you query how the main list's Formatting affects each suggestion's list, so that the user can see how it will be formatted once accepted.
+3. Likewise, you could have suggested formatting marks and add/delete them to toggle between the current vs suggested formatting.
+4. Server authority: A user can optimistically add a formatting mark to their local instance, send it to a server, and then delete the mark if the server rejects it (e.g., it was outside the range that the user is allowed to edit).
 
 ## Concepts
 
@@ -82,6 +84,10 @@ Formally, given the current set of marks, the current format at a position `pos`
 
 The null-value rule lets you delete a format key: for example, to change a range's format from `{ bold: true }` to `{}` (unbolding), add a new, winning mark with `mark.key = "bold"` and `mark.value = null`.
 
+### "Expand" behavior
+
+TODO - can copy from helpers.ts docs.
+
 ## API
 
 ### Class Formatting
@@ -99,6 +105,7 @@ Misc features:
 - `addMark` and `deleteMark` return changes to the current winning formatting.
 - `save()` and `load(savedState)` save and load the current set of marks, similar to list-positions's save and load methods.
 - `getActiveMarks(pos)` and `getAllMarks(pos)` give you more info about the marks covering a given Position.
+- There is no way to modify an existing mark, and you should avoid modifying IMark objects in-place. Instead, delete the current mark and add a modified version.
 
 **Warning:** Similar to list-positions's List class, you must [manage metadata](https://github.com/mweidner037/list-positions#managing-metadata) for a Formatting instance. Typically, you're already managing metadata for a List/Outline/LexList storing your actual values; it is then sufficient to share that list's `Order` with your Formatting instance, via the `order` constructor argument.
 
@@ -109,7 +116,7 @@ Subclass of `Formatting` that chooses a reasonable default sort order.
 TimestampFormatting uses marks of type `TimestampMark`, which is a JSON object:
 
 ```ts
-export type TimestampMark = {
+type TimestampMark = {
   start: Anchor;
   end: Anchor;
   key: string;

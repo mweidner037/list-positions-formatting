@@ -19,10 +19,24 @@ import { FormatChange, Formatting, FormattingSavedState } from "./formatting";
  * Thus a new mark "wins" over all marks in the current state, as expected.
  */
 export type TimestampMark = {
-  /** TODO: copy from IMark. x4 */
+  /**
+   * The mark's starting anchor.
+   */
   start: Anchor;
+  /**
+   * The mark's ending anchor.
+   */
   end: Anchor;
+  /**
+   * The mark's format key.
+   */
   key: string;
+  /**
+   * The mark's format value.
+   *
+   * A null value deletes key, causing it to no longer appear in
+   * format objects. Any other value appears as-is in format objects.
+   */
   value: any;
   /**
    * The replicaID of the TimestampFormatting instance that created this mark
@@ -30,10 +44,13 @@ export type TimestampMark = {
    */
   creatorID: string;
   /**
-   * The mark's [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp).
+   * The mark's [Lamport timestamp](https://en.wikipedia.org/wiki/Lamport_timestamp).
    *
    * Marks are sorted by this timestamp, with ties broken using the lexicographic
    * order on creatorIDs.
+   * 
+   * This field is always a positive integer. Note that timestamps might not
+   * be assigned consecutively for the same creatorID.
    */
   timestamp: number;
 };

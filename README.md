@@ -2,11 +2,154 @@
 
 Inline formatting for a list, e.g., collaborative rich text
 
+- [About](#about)
+- [Concepts](#concepts)
+- [API](#api)
+- [Performance](#performance)
+
 ## About
 
-Peritext-style formatting marks that you can apply to any list.
+This library complements [list-positions](https://github.com/mweidner037/list-positions). It lets you add _inline formatting_ to any list from that library: bold, font size, hyperlinks, etc. Inline formatting is a key component of rich text, and you can also use it for [spreadsheet rows/columns](https://mattweidner.com/2023/09/26/crdt-survey-2.html#spreadsheet-formatting) and other lists.
 
-CRDT-inspired, but not actually a CRDT.
+Each formatting _mark_ is defined in terms of `Position`s from the list-positions library. So multiple lists can share the same marks, including lists on different devices - enabling DIY collaborative rich-text editing.
 
-Uses Positions from the [list-positions](https://github.com/mweidner037/list-positions) library.
-this.expandRules === undefined ? "after" : this.expandRules(key, value);
+<!--
+### Example Use Cases
+
+1. TODO. Collaborative rich-text editor; suggested changes w/ suggested formats (or just viewing the main list's format applied to the suggestion - can even reuse same Formatting object). -->
+
+## Concepts
+
+list-formatting implements the core of the [Peritext rich-text CRDT](https://www.inkandswitch.com/peritext/) (though it is not itself a CRDT). It uses many of Peritext's concepts, which the previous link describes in detail; here is a self-contained summary.
+
+### Anchors
+
+An _anchor_ is a spot in a list that is immediately before or after a position. Concretely, it is a JSON object of type `Anchor`:
+
+```ts
+import { Position } from "list-positions";
+
+type Anchor = {
+  pos: Position;
+  /**
+   * True for a "before" anchor, false for an "after" anchor.
+   */
+  before: boolean;
+};
+```
+
+You can visualize a list's anchors as follows:
+
+TODO: image.
+
+### Marks
+
+A _mark_ is an instruction to change the format of a range of values. For example, a mark may make a sentence bold, or add a hyperlink to a word.
+
+Each mark starts and ends at an anchor. It sets a single key-value pair for all Positions between those anchors. For example, this mark gives `"cat"` the format `{ bold: true }`:
+
+TODO: image
+
+Concretely, a mark implements the interface `IMark`:
+
+```ts
+interface IMark {
+  start: Anchor;
+  end: Anchor;
+  /** The format key, e.g., "bold" or "url". */
+  key: string;
+  /** The value at key, e.g., true or "npmjs.org". */
+  value: any;
+}
+```
+
+### From marks to formatting
+
+A given list can have many marks, often overlapping with each other. The current set of marks determines the list's current format.
+
+The general principles are:
+
+1. Each mark affects all positions between its `start` and `end` anchors.
+2. Overlapping marks for different keys don't interact with each other. Instead, they combine to give multi-key formats like `{ bold: true, "font-size": 12 }`.
+3. Overlapping marks for the _same_ key are sorted in some way, e.g., using a timestamp. The greatest mark under this sort order is the "winner" and determines the current value. (You choose the sort order by extending the `IMark` interface with extra fields and supplying a `compareMarks` function that uses those fields.)
+
+The sort order is how you override an existing mark, e.g., changing the font size from 12 to 16: you create a new mark that "wins" over the existing mark.
+
+Formally, given the current set of marks, the current format at a position `pos` is an object of type `Record<string, any>`, given by:
+
+- For each format key `key`, find the greatest mark such that `mark.key = key` and the mark _covers_ `pos` (`mark.start < pos < mark.end`).
+- If `mark.value` is not null, then add the entry `{ key: mark.value }` to the format object. Otherwise, `key` is not present in the object.
+
+The null-value rule lets you delete a format key: for example, to change a range's format from `{ bold: true }` to `{}` (unbolding), add a new, winning mark with `mark.key = "bold"` and `mark.value = null`.
+
+## API
+
+### Class Formatting
+
+Class `Formatting<M extends IMark>` implements the above marks-to-formatting procedure. It is a local data structure storing a set of marks. Mutate the set using `addMark(mark)` and `deleteMark(mark)`. Other methods let you query the formatting resulting from the current set of marks:
+
+- `getFormat(pos)` returns the current format object at a Position.
+- `formattedSlices(list)` returns an efficient representation of the complete current Formatting state projected onto a specific list `list`. Specifically, it returns an array of _slices_ in list order, where each slice is a list range `{ startIndex: number, endIndex: number }` with a single format.
+- `formattedSpans()` returns an efficient representation of the complete current Formatting state, independent of a specific list. Specifically, it returns an array of _spans_ in list order, where each span is a range `{ start: Anchor, end: Anchor }` with a single format.
+
+Class Formatting does not specify the sort order on marks. Instead, you choose the sort order, by extending the `IMark` interface with extra fields (type parameter `M`) and supplying a `compareMarks` function that uses those fields. Alternatively, you can use the [TimestampFormatting](#class-timestamp-formatting) class, which chooses a reasonable default sort order.
+
+Misc features:
+
+- `addMark` and `deleteMark` return changes to the current winning formatting.
+- `save()` and `load(savedState)` save and load the current set of marks, similar to list-positions's save and load methods.
+- `getActiveMarks(pos)` and `getAllMarks(pos)` give you more info about the marks covering a given Position.
+
+**Warning:** Similar to list-positions's List class, you must [manage metadata](https://github.com/mweidner037/list-positions#managing-metadata) for a Formatting instance. Typically, you're already managing metadata for a List/Outline/LexList storing your actual values; it is then sufficient to share that list's `Order` with your Formatting instance, via the `order` constructor argument.
+
+### TimestampFormatting
+
+Subclass of `Formatting` that chooses a reasonable default sort order.
+
+TimestampFormatting uses marks of type `TimestampMark`, which is a JSON object:
+
+```ts
+export type TimestampMark = {
+  start: Anchor;
+  end: Anchor;
+  key: string;
+  value: any;
+  // TimestampMark metadata fields:
+  creatorID: string;
+  timestamp: number;
+};
+```
+
+To create a TimestampMark, use `TimestampFormatting.newMark`.
+
+TimestampFormatting's sort order uses [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp), with ties broken by `creatorID`. This sort order works well in general, including in collaborative settings with or without a central server.
+
+### RichList
+
+Convenience wrapper for a List with TimestampFormatting.
+
+RichList has an API more similar to a traditional rich-text data structure, combining indexed access, values, and formatting in a single object. E.g., it has a `getFormatAt(index)` method.
+
+Notable methods:
+
+- `insertWithFormat(index, format, ...values)`: Inserts values and applies new formatting marks as needed so that the values have the exact given format. This is a common operation when working with a rich-text editor: the editor tells you to insert some new values and what format they should have.
+- `format(startIndex, endIndex, key, value, expand?)`: Formats the slice from startIndex to endIndex so that the given format key maps to `value`, by adding a new mark.
+- `formattedValues()`: Returns an efficient representation of the list's values and their current formatting. It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
+
+For other operations, you act on the List (`.list`) or TimestampFormatting (`.formatting`) directly. E.g., to delete a value, call `richList.list.deleteAt(index)`; to add a mark received from a collaborator, call `richList.formatting.addMark(mark)`.
+
+RichList's `save()` and `load(savedState)` methods save the List, TimestampFormatting, and Order (metadata) states in a single JSON object. You can also save and load them separately.
+
+If you don't want to use RichList (e.g., because you are using an Outline instead of a List, or marks besides TimestampMarks), you can access the same functionality using the [Utilities](#utilities) below. Consider reading the [RichList source code](./src/rich_list.ts).
+
+### Utilities
+
+- `Anchors` static object: min and max Anchors, `equals` function for Anchors, and `indexOfAnchor`.
+- `diffFormats(current, target)`: Returns changes (including null for deletions) to turn the `current` format into `target`. Core logic behind `RichList.insertWithFormat`.
+- `sliceFromSpan`, `spanFromSlice`: Convert between list-independent spans `{ start: Anchor, end: Anchor }` and list-specific slices `{ startIndex: number, endIndex: number }`.
+
+## Performance
+
+<!-- TODO -->
+
+Benchmarks are to-do. However, this library's implementation is similar to [Collabs's](https://collabs.readthedocs.io/en/latest/) [CRichText](https://collabs.readthedocs.io/en/latest/api/collabs/classes/CRichText.html) and should have similar speed and metadata overhead. Cloud benchmarks showed that Collabs could handle [100+ simultaneous active users](https://arxiv.org/abs/2212.02618) in a collaborative rich-text editor with frequent formatting operations, exceeding Google Docs' scalability.

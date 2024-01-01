@@ -275,7 +275,7 @@ export class RichList<T> {
 
   // TODO: slice args?
   /**
-   * Returns an efficient representation of this RichList's values and their
+   * Returns an efficient representation of this RichList's values and their current
    * formatting.
    *
    * Specifically, returns an array of FormattedValues objects in list order.

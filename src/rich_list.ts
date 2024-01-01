@@ -16,7 +16,7 @@ import {
 } from "./timestamp_formatting";
 
 /**
- * A slice of values with the same format, returned by
+ * A slice of values with a single format, returned by
  * RichList.formattedValues.
  *
  * startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
@@ -250,6 +250,8 @@ export class RichList<T> {
     const mark = this.formatting.newMark(start, end, key, value);
     const changes = this.formatting.addMark(mark);
     this.onCreateMark?.(mark);
+    // TODO: return index version of changes instead? If you need the spans,
+    // you can DIY.
     return [mark, changes];
   }
 
@@ -277,7 +279,7 @@ export class RichList<T> {
    * formatting.
    *
    * Specifically, returns an array of FormattedValues objects in list order.
-   * Each object describes a slice of values with the same format.
+   * Each object describes a slice of values with a single format.
    */
   formattedValues(): FormattedValues<T>[] {
     const slices = this.formatting.formattedSlices(this.list);

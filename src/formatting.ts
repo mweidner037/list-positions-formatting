@@ -9,41 +9,112 @@ import {
 import { Anchor, Anchors } from "./anchor";
 
 /**
+ * TODO
  * Missing metadata needed for comparison,
  * e.g., a Lamport timestamp. Hence why I.
+ *
+ * See TimestampMark, used with TimestampFormatting.
  */
 export interface IMark {
+  /**
+   * The mark's starting anchor.
+   */
   start: Anchor;
+  /**
+   * The mark's ending anchor.
+   */
   end: Anchor;
+  /**
+   * The mark's format key.
+   */
   key: string;
   /**
-   * null values are used to delete formats (won't show up in Record<string, any> maps).
-   * Anything else goes, but make sure you can serialize it.
+   * The mark's format value.
+   *
+   * A null value deletes key, causing it to no longer appear in
+   * format objects. Any other value appears as-is in format objects.
    */
   value: any;
 }
 
+/**
+ * A span with a single format, returned by
+ * RichList.formattedSpans.
+ *
+ * The span is independent of any particular list.
+ */
 export type FormattedSpan = {
+  /**
+   * The span's starting anchor.
+   */
   start: Anchor;
+  /**
+   * The span's ending anchor.
+   */
   end: Anchor;
+  /**
+   * The common format for all Positions that fall within the span.
+   *
+   * The format applies to a Position regardless of its membership in any
+   * particular list.
+   */
   format: Record<string, any>;
 };
 
+/**
+ * A slice of a list with a single format, returned by
+ * RichList.formattedSlices.
+ *
+ * startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+ */
 export type FormattedSlice = {
+  /**
+   * The slice's starting index (inclusive).
+   */
   startIndex: number;
+  /**
+   * The slice's ending index (exclusive).
+   */
   endIndex: number;
+  /**
+   * The common format for all of the slice's values.
+   *
+   * Note: This format is not necessarily accurate for Positions that are not
+   * currently present in the target list, even if they lie between
+   * slice's endpoints' Positions.
+   */
   format: Record<string, any>;
 };
 
+/**
+ * A change to a span's format, returned by Formatting.addMark and Formatting.deleteMark.
+ */
 export type FormatChange = {
+  /**
+   * The span's starting anchor.
+   */
   start: Anchor;
+  /**
+   * The span's ending anchor.
+   */
   end: Anchor;
+  /**
+   * The key whose format changed.
+   */
   key: string;
-  // null if deleted.
+  /**
+   * The new format value, or null if the key was deleted.
+   */
   value: any;
-  // null if previously not present.
+  /**
+   * The previous format value at this span, or null if the key was not previously present.
+   */
   previousValue: any;
-  // The complete new format (excluding nulls).
+  /**
+   * The span's complete new format.
+   *
+   * Note that this excludes keys with null values, possibly including `this.key`.
+   */
   format: Record<string, any>;
 };
 
@@ -61,7 +132,25 @@ export type FormatChange = {
  */
 export type FormattingSavedState<M extends IMark> = M[];
 
+/**
+ * TODO
+ *
+ * See TimestampFormatting.
+ */
 export class Formatting<M extends IMark> {
+  /**
+   * [Compare function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort#comparefn)
+   * used for marks in this Formatting.
+   * 
+   * The compareMarks order determines which mark "wins" (i.e., sets its key's current value)
+   * when multiple marks cover the same Position.
+   * 
+   * Its implied equality semantics (a equals b if and only if `compareMarks(a, b) === 0`)
+   * is also used to check whether an added
+   * mark is redundant in `addMark`, and to find the mark to delete
+   * in `deleteMark`.
+   */
+  readonly compareMarks: (a: M, b: M) => number;
   /**
    * All marks in sort order.
    *
@@ -75,16 +164,20 @@ export class Formatting<M extends IMark> {
   private readonly formatList: List<FormatData<M>>;
 
   /**
+   * Constructs a TimestampFormatting.
    *
-   * @param order The source of Positions that you will use as args.
-   * Usually your list's `.order`.
-   * @param compareMarks
+   * @param order The Order to use for `this.order`.
+   * Typically, it should be shared with the list(s) that this
+   * is formatting.
+   * If not provided, a `new Order()` is used.
+   * @param compareMarks The function to use for `this.compareMarks`.
    */
   constructor(
     readonly order: Order,
-    readonly compareMarks: (a: M, b: M) => number
+    compareMarks: (a: M, b: M) => number
   ) {
-    // If init is changed, also update clear().
+    this.compareMarks = compareMarks;
+    // If init logic is changed, also update clear().
     this.orderedMarks = [];
     this.formatList = new List(order);
     // Set the start anchor so you can always "go left" to find FormatData.
@@ -129,11 +222,15 @@ export class Formatting<M extends IMark> {
     }
   }
 
-  // Stores the literal reference for access in marks() etc. -
-  // so you can use === comparison later.
-  // Skips redundant marks (according to compareMarks).
   /**
-   * @returns Format changes in order (not nec contiguous or the whole mark).
+   * Adds the given mark to our internal state.
+   * 
+   * Changes to the current winning formatting are returned. These are in list
+   * order, but they might not be contiguous and might not cover the mark's
+   * entire span, if the given mark loses to existing marks.
+   * 
+   * If the mark is already present, nothing happens. Here equality is tested
+   * using compareMarks, *not* by-reference equality.
    */
   addMark(mark: M): FormatChange[] {
     const index = this.locateMark(this.orderedMarks, mark);
@@ -300,10 +397,15 @@ export class Formatting<M extends IMark> {
     } else sliceBuilder.add(anchor, null);
   }
 
-  // Deletes using compareMarks equality.
-  // Use delete + add new to "mutate" a mark
   /**
-   * @returns Format changes in order (not nec contiguous or the whole mark).
+   * Deletes the given mark from our internal state.
+   * 
+   * Changes to the current winning formatting are returned. These are in list
+   * order, but they might not be contiguous and might not cover the mark's
+   * entire span, if the given mark was losing to other marks.
+   * 
+   * If the mark is already not present, nothing happens. Here equality is tested
+   * using compareMarks, *not* by-reference equality.
    */
   deleteMark(mark: M): FormatChange[] {
     const index = this.locateMark(this.orderedMarks, mark);
@@ -405,6 +507,11 @@ export class Formatting<M extends IMark> {
     } else sliceBuilder.add(anchor, null);
   }
 
+  /**
+   * Deletes every mark, making our start empty.
+   *
+   * `this.order` is unaffected (retains all metadata).
+   */
   clear(): void {
     this.orderedMarks = [];
     this.formatList.clear();
@@ -413,6 +520,8 @@ export class Formatting<M extends IMark> {
   }
 
   /**
+   * Returns the current format at pos.
+   *
    * @throws If pos is min or max Position.
    */
   getFormat(pos: Position): Record<string, any> {
@@ -420,7 +529,11 @@ export class Formatting<M extends IMark> {
   }
 
   /**
-   * Might include null (overwriting) marks.
+   * Returns the current active (winning) marks at pos, as a Map from format keys
+   * to marks.
+   *
+   * Note that an active mark may have value null, in which case its key does
+   * not appear in `getFormat(pos)`.
    *
    * @throws If pos is min or max Position.
    */
@@ -433,7 +546,11 @@ export class Formatting<M extends IMark> {
   }
 
   /**
-   * Value arrays: in compareMarks order (increasing); always nonempty.
+   * Returns all marks at pos, as a Map from format keys
+   * to marks using that key.
+   *
+   * Each array of marks
+   * is nonempty and in compareMarks order.
    *
    * @throws If pos is min or max Position.
    */
@@ -469,9 +586,14 @@ export class Formatting<M extends IMark> {
 
   // TODO: slice args? E.g. so you can clear/overwrite a range's format.
   /**
-   * The whole list as a series of spans with their current formats.
+   * Returns an efficient representation of our current Formatting state,
+   * independent of a specific list.
    *
-   * In order; starts with open minPos, ends with open maxPos.
+   * Specifically, returns an array of FormattedSpans in list order.
+   * Each object describes a span with a single format.
+   * The spans start at `Anchors.MIN_ANCHOR` and
+   * end at `Anchors.MAX_ANCHOR`, with each span's `start` equal to the previous
+   * span's `end`.
    */
   formattedSpans(): FormattedSpan[] {
     const sliceBuilder = new SpanBuilder<Record<string, unknown>>(equalsRecord);
@@ -500,6 +622,13 @@ export class Formatting<M extends IMark> {
   }
 
   // TODO: slice args?
+  /**
+   * Returns an efficient representation of the given list's formatting,
+   * according to our current Formatting state.
+   *
+   * Specifically, returns an array of FormattedSlices in list order.
+   * Each object describes a slice of the list with a single format.
+   */
   formattedSlices(
     list: List<unknown> | LexList<unknown> | Outline
   ): FormattedSlice[] {
@@ -526,9 +655,10 @@ export class Formatting<M extends IMark> {
   }
 
   /**
-   * All marks, regardless of whether they are currently winning.
+   * Returns an iterator of our current marks, in compareMarks order (ascending).
    *
-   * In compareMarks order.
+   * This includes all marks that have been added and not deleted, regardless
+   * of whether they currently win at any Position.
    */
   marks(): IterableIterator<M> {
     return this.orderedMarks[Symbol.iterator]();

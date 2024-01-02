@@ -1,9 +1,9 @@
 {
   "name": "list-formatting",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Inline formatting for a list, e.g., collaborative rich text",
   "author": "Matthew Weidner",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/mweidner037/list-formatting/issues"
   },

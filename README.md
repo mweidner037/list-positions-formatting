@@ -6,6 +6,7 @@ Inline formatting for a list, e.g., collaborative rich text
 - [Concepts](#concepts)
 - [API](#api)
 - [Performance](#performance)
+- [Demos ↗️](https://github.com/mweidner037/list-demos)
 
 ## About
 

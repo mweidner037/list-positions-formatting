@@ -45,6 +45,21 @@ export const Anchors = {
   },
 
   /**
+   * [Compare function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort#comparefn)
+   * for Anchors.
+   *
+   * @param order The Order for the anchors' Positions.
+   */
+  compare(order: Order, a: Anchor, b: Anchor): number {
+    const posCompare = order.compare(a.pos, b.pos);
+    if (posCompare === 0) {
+      if (a.before === b.before) return 0;
+      return a.before ? -1 : 1;
+    }
+    return posCompare;
+  },
+
+  /**
    * Returns the next index to the right of anchor in the given list,
    * or `list.length` if anchor is after all present positions.
    *

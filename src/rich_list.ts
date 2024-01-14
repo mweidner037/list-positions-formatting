@@ -6,7 +6,6 @@ import {
   OrderSavedState,
   Position,
 } from "list-positions";
-import { Anchors } from "./anchor";
 import { FormatChange, FormattedSlice } from "./formatting";
 import { diffFormats, spanFromSlice } from "./helpers";
 import {
@@ -311,15 +310,25 @@ export class RichList<T> {
    *
    * Specifically, returns an array of FormattedValues objects in list order.
    * Each object describes a slice of values with a single format.
+   *
+   * Arguments are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
    */
-  formattedValues(): FormattedValues<T>[] {
+  formattedValues(start?: number, end?: number): FormattedValues<T>[] {
     const slices = this.formatting.formattedSlices(
-      this.list
+      this.list,
+      start,
+      end
     ) as (FormattedSlice & { values?: T[] })[];
-    const values = this.list.slice();
+    if (slices.length === 0) return [];
+
+    const values = this.list.slice(start, end);
+    const valuesStart = slices[0].startIndex;
     for (const slice of slices) {
       // slice only appears here, so it's okay to modify it in-place.
-      slice.values = values.slice(slice.startIndex, slice.endIndex);
+      slice.values = values.slice(
+        slice.startIndex - valuesStart,
+        slice.endIndex - valuesStart
+      );
     }
     return slices as FormattedValues<T>[];
   }
@@ -330,16 +339,17 @@ export class RichList<T> {
    *
    * Typically, you should instead use `formattedValues()`, which returns a
    * more efficient representation of the formatted values.
+   *
+   * Arguments are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
    */
-  *entries(): IterableIterator<
-    [pos: Position, value: T, format: Record<string, any>]
-  > {
-    let index = 0;
-    for (const span of this.formatting.formattedSpans()) {
-      const endIndex = Anchors.indexOfAnchor(this.list, span.end);
-      for (; index < endIndex; index++) {
+  *entries(
+    start?: number,
+    end?: number
+  ): IterableIterator<[pos: Position, value: T, format: Record<string, any>]> {
+    for (const values of this.formattedValues(start, end)) {
+      for (let index = values.startIndex; index < values.endIndex; index++) {
         const pos = this.list.positionAt(index);
-        yield [pos, this.list.get(pos)!, span.format];
+        yield [pos, values.values[index - values.startIndex], values.format];
       }
     }
   }

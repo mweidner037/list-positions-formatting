@@ -249,11 +249,7 @@ export class Formatting<M extends IMark> {
       return [];
     }
 
-    const compared = this.order.compare(mark.start.pos, mark.end.pos);
-    if (
-      compared > 0 ||
-      (compared === 0 && !(mark.start.before && !mark.end.before))
-    ) {
+    if (Anchors.compare(this.order, mark.start, mark.end) >= 0) {
       throw new Error(
         `mark has start >= end: ${JSON.stringify(mark.start)}, ${JSON.stringify(
           mark.end
@@ -601,27 +597,101 @@ export class Formatting<M extends IMark> {
    *
    * Specifically, returns an array of FormattedSpans in list order.
    * Each object describes a span with a single format.
-   * The spans start at `Anchors.MIN_ANCHOR` and
-   * end at `Anchors.MAX_ANCHOR`, with each span's `start` equal to the previous
-   * span's `end`.
+   * The spans start and end at the given anchors, with each `span.start`
+   * equal to the previous `span.end`.
+   *
+   * @param start The first span's `start`. Default: `Anchors.MIN_ANCHOR`.
+   * @param end The last span's `end`. Default: `Anchors.MAX_ANCHOR`.
+   * @throws If start > end.
    */
-  formattedSpans(): FormattedSpan[] {
+  formattedSpans(
+    start: Anchor = Anchors.MIN_ANCHOR,
+    end: Anchor = Anchors.MAX_ANCHOR
+  ): FormattedSpan[] {
+    // Special cases.
+    const cmp = Anchors.compare(this.order, start, end);
+    if (cmp === 0) return [];
+    if (cmp > 0) {
+      throw new Error(
+        `start > end: start=${JSON.stringify(start)}, end=${JSON.stringify(
+          end
+        )}`
+      );
+    }
+
     const sliceBuilder = new SpanBuilder<Record<string, unknown>>(equalsRecord);
-    // formatList always contains the starting anchor, so this will cover the
-    // whole beginning.
-    for (const [pos, data] of this.formatList.entries()) {
+
+    // Find the first anchor to visit, visit its Position (both anchors),
+    // and record its index in formatList.
+    // The "first anchor to visit" is the one at or just before `start`.
+    // Such an anchor always exists because MIN_ANCHOR is always present.
+    let firstIndex: number;
+    const startPosData = this.formatList.get(start.pos);
+    if (start.before && startPosData?.before !== undefined) {
+      // First anchor is (start.pos, before).
+      firstIndex = this.formatList.indexOfPosition(start.pos);
+      sliceBuilder.add(start, dataToRecord(startPosData.before));
+      if (startPosData.after !== undefined) {
+        sliceBuilder.add(
+          { pos: start.pos, before: false },
+          dataToRecord(startPosData.after)
+        );
+      }
+    } else if (!start.before && startPosData !== undefined) {
+      // First anchor is start.pos's last present anchor.
+      firstIndex = this.formatList.indexOfPosition(start.pos);
+      sliceBuilder.add(
+        start,
+        dataToRecord(startPosData.after ?? startPosData.before!)
+      );
+    } else {
+      // First anchor is the previous position's last present anchor.
+      firstIndex = this.formatList.indexOfPosition(start.pos, "right") - 1;
+      const prevPosData = this.formatList.getAt(firstIndex);
+      sliceBuilder.add(
+        start,
+        dataToRecord(prevPosData.after ?? prevPosData.before!)
+      );
+    }
+
+    // Find the last anchor to visit, *inclusive*.
+    // It's the one just before `end`.
+    // Instead of finding the exact anchor, we just find its Position's
+    // index and whether that Position's "after" anchor is safe to visit
+    // (< end).
+    let lastIndex: number;
+    let lastAfterSafe: boolean;
+    if (!end.before && this.formatList.get(end.pos)?.before !== undefined) {
+      // Use (end.pos, before), which is just before end = (end.pos, after).
+      lastIndex = this.formatList.indexOfPosition(end.pos);
+      lastAfterSafe = false;
+    } else {
+      // Use the previous position's last present anchor.
+      lastIndex = this.formatList.indexOfPosition(end.pos, "right") - 1;
+      lastAfterSafe = true;
+    }
+
+    // We already visited firstIndex (both anchors), and lastIndex is inclusive.
+    let i = firstIndex + 1;
+    for (const [pos, data] of this.formatList.entries(
+      firstIndex + 1,
+      lastIndex + 1
+    )) {
       if (data.before !== undefined) {
         sliceBuilder.add({ pos, before: true }, dataToRecord(data.before));
       }
       if (data.after !== undefined) {
-        sliceBuilder.add({ pos, before: false }, dataToRecord(data.after));
+        if (i !== lastIndex || lastAfterSafe) {
+          sliceBuilder.add({ pos, before: false }, dataToRecord(data.after));
+        }
       }
+      i++;
     }
-    // Reach the end of the list if we haven't already.
-    const slices = sliceBuilder.finish({
-      pos: Order.MAX_POSITION,
-      before: true,
-    });
+
+    // We added data up to but not including `end`.
+    // Finish with a span that ends at `end`.
+    // Note: this ignores any format that starts exactly at `end`.
+    const slices = sliceBuilder.finish(end);
 
     // Map the slices to the expected format.
     return slices.map((slice) => ({
@@ -637,21 +707,51 @@ export class Formatting<M extends IMark> {
    *
    * Specifically, returns an array of FormattedSlices in list order.
    * Each object describes a slice of the list with a single format.
+   *
+   * `startIndex` and `endIndex` are as in
+   * [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
    */
   formattedSlices(
-    list: List<unknown> | LexList<unknown> | Outline
+    list: List<unknown> | LexList<unknown> | Outline,
+    startIndex?: number,
+    endIndex?: number
   ): FormattedSlice[] {
+    const posList = list instanceof LexList ? list.list : list;
+
+    const range = normalizeSliceRange(posList.length, startIndex, endIndex);
+    if (range === null) return [];
+    [startIndex, endIndex] = range;
+
+    // As an optimization, restrict formattedSpans() to anchors that
+    // could actually intersect with [start, end).
+    const startAnchor = {
+      pos: posList.positionAt(startIndex),
+      before: true,
+    };
+    const endAnchor = {
+      // Since start < end and start is a valid index, so is end - 1.
+      pos: posList.positionAt(endIndex - 1),
+      before: false,
+    };
+
     const slices: FormattedSlice[] = [];
     let prevSlice: FormattedSlice | null = null;
-    for (const span of this.formattedSpans()) {
-      const startIndex: number = prevSlice?.endIndex ?? 0;
-      const endIndex = Anchors.indexOfAnchor(list, span.end);
-      if (endIndex !== startIndex) {
+    for (const span of this.formattedSpans(startAnchor, endAnchor)) {
+      // Convert span to slice, intersected with [start, end).
+      const sliceStartIndex: number = prevSlice?.endIndex ?? startIndex;
+      // Since we end at endAnchor, this is at most `end`.
+      // (Without that opt, we would need to take the min with `end`.)
+      const sliceEndIndex = Anchors.indexOfAnchor(posList, span.end);
+      if (sliceEndIndex !== sliceStartIndex) {
         if (prevSlice !== null && equalsRecord(span.format, prevSlice.format)) {
           // Combine sequential slices with the same format.
-          (prevSlice as { endIndex: number }).endIndex = endIndex;
+          (prevSlice as { endIndex: number }).endIndex = sliceEndIndex;
         } else {
-          const slice = { startIndex, endIndex, format: span.format };
+          const slice = {
+            startIndex: sliceStartIndex,
+            endIndex: sliceEndIndex,
+            format: span.format,
+          };
           slices.push(slice);
           prevSlice = slice;
         }
@@ -828,4 +928,26 @@ function equalsFormatChangeInternal(
 ): boolean {
   if (a === null || b === null) return a === b;
   return a.otherValue === b.otherValue && equalsRecord(a.format, b.format);
+}
+
+/**
+ * Normalizes the range so that start < end and they are both in bounds
+ * (possibly end=length), following Array.slice.
+ * If the range is empty, returns null.
+ */
+function normalizeSliceRange(
+  length: number,
+  start?: number,
+  end?: number
+): [start: number, end: number] | null {
+  if (start === undefined || start < -length) start = 0;
+  else if (start < 0) start += length;
+  else if (start >= length) return null;
+
+  if (end === undefined || end >= length) end = length;
+  else if (end < -length) end = 0;
+  else if (end < 0) end += length;
+
+  if (end <= start) return null;
+  return [start, end];
 }

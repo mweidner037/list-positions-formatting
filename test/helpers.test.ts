@@ -2,7 +2,13 @@ import { assert } from "chai";
 import { BunchIDs, List, Order, Position } from "list-positions";
 import { describe, test } from "mocha";
 import seedrandom from "seedrandom";
-import { diffFormats, sliceFromSpan, spanFromSlice } from "../src";
+import {
+  Anchor,
+  Anchors,
+  diffFormats,
+  sliceFromSpan,
+  spanFromSlice,
+} from "../src";
 
 describe("helpers", () => {
   let rng!: seedrandom.prng;
@@ -295,6 +301,31 @@ describe("helpers", () => {
         { a: 7, c: 3, b: null },
         { a: 7, b: null, c: 3 }
       );
+    });
+  });
+
+  // Anchors.compare tests.
+  describe("compare", () => {
+    test("all pairs", () => {
+      const list = new List(
+        new Order({
+          newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+        })
+      );
+      list.insertAt(0, ..."0123456789");
+
+      const allAnchors: Anchor[] = [Anchors.MIN_ANCHOR];
+      for (const pos of list.positions()) {
+        allAnchors.push({ pos, before: true }, { pos, before: false });
+      }
+      allAnchors.push(Anchors.MAX_ANCHOR);
+
+      for (let i = 0; i < allAnchors.length; i++) {
+        for (let j = 0; j < allAnchors.length; j++) {
+          const cmp = Anchors.compare(list.order, allAnchors[i], allAnchors[j]);
+          assert.strictEqual(Math.sign(cmp), Math.sign(i - j));
+        }
+      }
     });
   });
 });

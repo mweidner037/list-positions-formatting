@@ -249,11 +249,7 @@ export class Formatting<M extends IMark> {
       return [];
     }
 
-    const compared = this.order.compare(mark.start.pos, mark.end.pos);
-    if (
-      compared > 0 ||
-      (compared === 0 && !(mark.start.before && !mark.end.before))
-    ) {
+    if (Anchors.compare(this.order, mark.start, mark.end) >= 0) {
       throw new Error(
         `mark has start >= end: ${JSON.stringify(mark.start)}, ${JSON.stringify(
           mark.end
@@ -613,9 +609,9 @@ export class Formatting<M extends IMark> {
     end: Anchor = Anchors.MAX_ANCHOR
   ): FormattedSpan[] {
     // Special cases.
-    const posCompare = this.order.compare(start.pos, end.pos);
-    if (posCompare === 0 && start.before === end.before) return [];
-    if (posCompare > 0 || (posCompare === 0 && !start.before && end.before)) {
+    const cmp = Anchors.compare(this.order, start, end);
+    if (cmp === 0) return [];
+    if (cmp > 0) {
       throw new Error(
         `start > end: start=${JSON.stringify(start)}, end=${JSON.stringify(
           end
@@ -697,7 +693,7 @@ export class Formatting<M extends IMark> {
     // We added data up to but not including `end`.
     // Finish with a span that ends at `end`.
     // Note: this ignores any format that starts exactly at `end`.
-    const slices = sliceBuilder.finish(end ?? Anchors.MAX_ANCHOR);
+    const slices = sliceBuilder.finish(end);
 
     // Map the slices to the expected format.
     return slices.map((slice) => ({

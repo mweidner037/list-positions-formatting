@@ -3,7 +3,9 @@ import { BunchIDs, List, Order, Position } from "list-positions";
 import { describe, test } from "mocha";
 import seedrandom from "seedrandom";
 import {
+  Anchor,
   Anchors,
+  FormattedSlice,
   FormattedSpan,
   TimestampFormatting,
   TimestampMark,
@@ -77,6 +79,87 @@ describe("TimestampFormatting", () => {
         formatting2.formattedSpans(),
         formatting.formattedSpans()
       );
+
+      // Check slice args to formattedSpans.
+      const allAnchors: Anchor[] = [Anchors.MIN_ANCHOR];
+      for (const pos of poss) {
+        allAnchors.push({ pos, before: true }, { pos, before: false });
+      }
+      allAnchors.push(Anchors.MAX_ANCHOR);
+      const formattedSpans = formatting.formattedSpans();
+      for (let s = 0; s < allAnchors.length; s++) {
+        for (let e = s; e < allAnchors.length; e++) {
+          assert.deepStrictEqual(
+            formatting.formattedSpans(allAnchors[s], allAnchors[e]),
+            restrictFormattedSpans(formattedSpans, allAnchors[s], allAnchors[e])
+          );
+        }
+      }
+
+      // Check slice args to formattedSlices.
+      // Do it for both list and another List with a subset of Positions.
+      const subList = new List<string>(list.order);
+      for (let i = 1; i < list.length; i += 3) {
+        subList.set(list.positionAt(i), list.getAt(i));
+      }
+      for (const theList of [list, subList]) {
+        const formattedSlices = formatting.formattedSlices(theList);
+        for (let s = 0; s < theList.length; s++) {
+          for (let e = s; e < theList.length; e++) {
+            assert.deepStrictEqual(
+              formatting.formattedSlices(theList, s, e),
+              restrictFormattedSlices(formattedSlices, s, e)
+            );
+          }
+        }
+      }
+    }
+
+    function restrictFormattedSpans(
+      spans: FormattedSpan[],
+      start: Anchor,
+      end: Anchor
+    ): FormattedSpan[] {
+      const restricted: FormattedSpan[] = [];
+      for (const span of spans) {
+        const newStart =
+          Anchors.compare(list.order, start, span.start) > 0
+            ? start
+            : span.start;
+        const newEnd =
+          Anchors.compare(list.order, end, span.end) < 0 ? end : span.end;
+        if (Anchors.compare(list.order, newStart, newEnd) < 0) {
+          restricted.push({
+            start: newStart,
+            end: newEnd,
+            format: span.format,
+          });
+        }
+      }
+      return restricted;
+    }
+
+    /**
+     * Computes the restriction of slices to the given range [startIndex, endIndex).
+     */
+    function restrictFormattedSlices(
+      slices: FormattedSlice[],
+      startIndex: number,
+      endIndex: number
+    ): FormattedSlice[] {
+      const restricted: FormattedSlice[] = [];
+      for (const slice of slices) {
+        const newStartIndex = Math.max(startIndex, slice.startIndex);
+        const newEndIndex = Math.min(endIndex, slice.endIndex);
+        if (newStartIndex < newEndIndex) {
+          restricted.push({
+            startIndex: newStartIndex,
+            endIndex: newEndIndex,
+            format: slice.format,
+          });
+        }
+      }
+      return restricted;
     }
 
     test("empty formatting", () => {
@@ -1833,6 +1916,24 @@ describe("TimestampFormatting", () => {
       assert.doesNotThrow(() => {
         formatting.getFormat(poss.at(-1)!);
       });
+
+      // Bad formattedSpans args.
+      assert.throws(() => {
+        formatting.formattedSpans(
+          { pos: poss[0], before: false },
+          { pos: poss[0], before: true }
+        );
+      });
+      for (const before1 of [true, false]) {
+        for (const before2 of [true, false]) {
+          assert.throws(() => {
+            formatting.formattedSpans(
+              { pos: poss[4], before: before1 },
+              { pos: poss[3], before: before2 }
+            );
+          });
+        }
+      }
     });
 
     test("empty load", () => {

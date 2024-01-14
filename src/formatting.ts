@@ -710,28 +710,29 @@ export class Formatting<M extends IMark> {
    * Specifically, returns an array of FormattedSlices in list order.
    * Each object describes a slice of the list with a single format.
    *
-   * `start` and `end` are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+   * `startIndex` and `endIndex` are as in
+   * [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
    */
   formattedSlices(
     list: List<unknown> | LexList<unknown> | Outline,
-    start?: number,
-    end?: number
+    startIndex?: number,
+    endIndex?: number
   ): FormattedSlice[] {
     const posList = list instanceof LexList ? list.list : list;
 
-    const range = normalizeSliceRange(posList.length, start, end);
+    const range = normalizeSliceRange(posList.length, startIndex, endIndex);
     if (range === null) return [];
-    [start, end] = range;
+    [startIndex, endIndex] = range;
 
     // As an optimization, restrict formattedSpans() to anchors that
     // could actually intersect with [start, end).
     const startAnchor = {
-      pos: posList.positionAt(start),
+      pos: posList.positionAt(startIndex),
       before: true,
     };
     const endAnchor = {
       // Since start < end and start is a valid index, so is end - 1.
-      pos: posList.positionAt(end - 1),
+      pos: posList.positionAt(endIndex - 1),
       before: false,
     };
 
@@ -739,16 +740,20 @@ export class Formatting<M extends IMark> {
     let prevSlice: FormattedSlice | null = null;
     for (const span of this.formattedSpans(startAnchor, endAnchor)) {
       // Convert span to slice, intersected with [start, end).
-      const startIndex: number = prevSlice?.endIndex ?? start;
+      const sliceStartIndex: number = prevSlice?.endIndex ?? startIndex;
       // Since we end at endAnchor, this is at most `end`.
       // (Without that opt, we would need to take the min with `end`.)
-      const endIndex = Anchors.indexOfAnchor(posList, span.end);
-      if (endIndex !== startIndex) {
+      const sliceEndIndex = Anchors.indexOfAnchor(posList, span.end);
+      if (sliceEndIndex !== sliceStartIndex) {
         if (prevSlice !== null && equalsRecord(span.format, prevSlice.format)) {
           // Combine sequential slices with the same format.
-          (prevSlice as { endIndex: number }).endIndex = endIndex;
+          (prevSlice as { endIndex: number }).endIndex = sliceEndIndex;
         } else {
-          const slice = { startIndex, endIndex, format: span.format };
+          const slice = {
+            startIndex: sliceStartIndex,
+            endIndex: sliceEndIndex,
+            format: span.format,
+          };
           slices.push(slice);
           prevSlice = slice;
         }

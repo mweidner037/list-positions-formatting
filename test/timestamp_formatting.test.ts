@@ -104,8 +104,8 @@ describe("TimestampFormatting", () => {
       }
       for (const theList of [list, subList]) {
         const formattedSlices = formatting.formattedSlices(theList);
-        for (let s = 0; s < theList.length; s++) {
-          for (let e = s; e < theList.length; e++) {
+        for (let s = 0; s <= theList.length; s++) {
+          for (let e = s; e <= theList.length; e++) {
             assert.deepStrictEqual(
               formatting.formattedSlices(theList, s, e),
               restrictFormattedSlices(formattedSlices, s, e)

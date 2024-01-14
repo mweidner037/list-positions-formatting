@@ -2,7 +2,7 @@ import { assert } from "chai";
 import { BunchIDs, Order } from "list-positions";
 import { beforeEach, describe, test } from "mocha";
 import seedrandom from "seedrandom";
-import { Anchors, RichList } from "../src";
+import { Anchors, FormattedValues, RichList } from "../src";
 
 describe("RichList", () => {
   let rng!: seedrandom.prng;
@@ -67,6 +67,44 @@ describe("RichList", () => {
         richList2.formattedValues(),
         richList.formattedValues()
       );
+
+      // Check slice args to formattedValues.
+      const formattedValues = richList.formattedValues();
+      for (let s = 0; s <= richList.list.length; s++) {
+        for (let e = s; e <= richList.list.length; e++) {
+          assert.deepStrictEqual(
+            richList.formattedValues(s, e),
+            restrictFormattedValues(formattedValues, s, e)
+          );
+        }
+      }
+    }
+
+    /**
+     * Computes the restriction of slices to the given range [startIndex, endIndex).
+     */
+    function restrictFormattedValues<T>(
+      slices: FormattedValues<T>[],
+      startIndex: number,
+      endIndex: number
+    ): FormattedValues<T>[] {
+      const restricted: FormattedValues<T>[] = [];
+      for (const slice of slices) {
+        const newStartIndex = Math.max(startIndex, slice.startIndex);
+        const newEndIndex = Math.min(endIndex, slice.endIndex);
+        if (newStartIndex < newEndIndex) {
+          restricted.push({
+            startIndex: newStartIndex,
+            endIndex: newEndIndex,
+            format: slice.format,
+            values: slice.values.slice(
+              newStartIndex - slice.startIndex,
+              newEndIndex - slice.startIndex
+            ),
+          });
+        }
+      }
+      return restricted;
     }
   }
 
@@ -382,6 +420,7 @@ describe("RichList", () => {
         },
       ]);
       assert.deepStrictEqual(bob.formattedValues(), alice.formattedValues());
+      checkMisc();
     });
   });
 });

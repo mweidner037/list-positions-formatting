@@ -94,8 +94,8 @@ The null-value rule lets you delete a format key: for example, to change a range
 Class `Formatting<M extends IMark>` implements the above marks-to-formatting procedure. It is a local data structure storing a set of marks. Mutate the set using `addMark(mark)` and `deleteMark(mark)`. Other methods let you query the formatting resulting from the current set of marks:
 
 - `getFormat(pos)` returns the current format object at a Position.
-- `formattedSlices(list)` returns an efficient representation of the complete current Formatting state projected onto a specific list `list`. Specifically, it returns an array of _slices_ in list order, where each slice is a list range `{ startIndex: number, endIndex: number }` with a single format.
-- `formattedSpans()` returns an efficient representation of the complete current Formatting state, independent of a specific list. Specifically, it returns an array of _spans_ in list order, where each span is a range `{ start: Anchor, end: Anchor }` with a single format.
+- `formattedSlices(list)` returns an efficient representation of the complete current Formatting state projected onto a specific list `list`. Specifically, it returns an array of _slices_ in list order, where each slice is a list range `{ startIndex: number, endIndex: number }` with a single format. Use the optional arguments `startIndex?, endIndex?` to restrict to part of `list`.
+- `formattedSpans()` returns an efficient representation of the complete current Formatting state, independent of a specific list. Specifically, it returns an array of _spans_ in list order, where each span is a range `{ start: Anchor, end: Anchor }` with a single format. Use the optional arguments `start?, end?` to restrict to part of the order.
 
 Class Formatting does not specify the sort order on marks. Instead, you choose the sort order, by extending the `IMark` interface with extra fields (type parameter `M`) and supplying a `compareMarks` function that uses those fields. Alternatively, you can use the [TimestampFormatting](#class-timestamp-formatting) class, which chooses a reasonable default sort order.
 

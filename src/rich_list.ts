@@ -311,10 +311,14 @@ export class RichList<T> {
    *
    * Specifically, returns an array of FormattedValues objects in list order.
    * Each object describes a slice of values with a single format.
+   *
+   * Arguments are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
    */
-  formattedValues(): FormattedValues<T>[] {
+  formattedValues(start?: number, end?: number): FormattedValues<T>[] {
     const slices = this.formatting.formattedSlices(
-      this.list
+      this.list,
+      start,
+      end
     ) as (FormattedSlice & { values?: T[] })[];
     const values = this.list.slice();
     for (const slice of slices) {

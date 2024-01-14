@@ -597,8 +597,8 @@ export class Formatting<M extends IMark> {
    *
    * Specifically, returns an array of FormattedSpans in list order.
    * Each object describes a span with a single format.
-   * The spans start and end at the given anchors, with each span's `start`
-   * equal to the previous span's `end`.
+   * The spans start and end at the given anchors, with each `span.start`
+   * equal to the previous `span.end`.
    *
    * @param start The first span's `start`. Default: `Anchors.MIN_ANCHOR`.
    * @param end The last span's `end`. Default: `Anchors.MAX_ANCHOR`.
@@ -623,7 +623,7 @@ export class Formatting<M extends IMark> {
 
     // Find the first anchor to visit, visit its Position (both anchors),
     // and record its index in formatList.
-    // The "first anchor to visit" is the one at or just before (start ?? MIN_ANCHOR).
+    // The "first anchor to visit" is the one at or just before `start`.
     // Such an anchor always exists because MIN_ANCHOR is always present.
     let firstIndex: number;
     const startPosData = this.formatList.get(start.pos);
@@ -655,22 +655,20 @@ export class Formatting<M extends IMark> {
     }
 
     // Find the last anchor to visit, *inclusive*.
-    // It's the one just before (end ?? MAX_ANCHOR).
+    // It's the one just before `end`.
     // Instead of finding the exact anchor, we just find its Position's
     // index and whether that Position's "after" anchor is safe to visit
     // (< end).
     let lastIndex: number;
     let lastAfterSafe: boolean;
-    {
-      if (!end.before && this.formatList.get(end.pos)?.before !== undefined) {
-        // Use (end.pos, before), which is just before end = (end.pos, after).
-        lastIndex = this.formatList.indexOfPosition(end.pos);
-        lastAfterSafe = false;
-      } else {
-        // Use the previous position's last present anchor.
-        lastIndex = this.formatList.indexOfPosition(end.pos, "right") - 1;
-        lastAfterSafe = true;
-      }
+    if (!end.before && this.formatList.get(end.pos)?.before !== undefined) {
+      // Use (end.pos, before), which is just before end = (end.pos, after).
+      lastIndex = this.formatList.indexOfPosition(end.pos);
+      lastAfterSafe = false;
+    } else {
+      // Use the previous position's last present anchor.
+      lastIndex = this.formatList.indexOfPosition(end.pos, "right") - 1;
+      lastAfterSafe = true;
     }
 
     // We already visited firstIndex (both anchors), and lastIndex is inclusive.

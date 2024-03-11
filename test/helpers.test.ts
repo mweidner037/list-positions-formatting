@@ -11,7 +11,7 @@ import {
 } from "../src";
 
 describe("helpers", () => {
-  let rng!: seedrandom.prng;
+  let rng!: seedrandom.PRNG;
 
   beforeEach(() => {
     rng = seedrandom("42");

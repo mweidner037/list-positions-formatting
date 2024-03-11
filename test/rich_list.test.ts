@@ -5,7 +5,7 @@ import seedrandom from "seedrandom";
 import { Anchors, FormattedValues, RichList } from "../src";
 
 describe("RichList", () => {
-  let rng!: seedrandom.prng;
+  let rng!: seedrandom.PRNG;
   let alice!: RichList<string>;
   let bob!: RichList<string>;
 

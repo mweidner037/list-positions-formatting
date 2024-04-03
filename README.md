@@ -12,13 +12,13 @@ Inline formatting for a list, e.g., collaborative rich text
 
 This library complements [list-positions](https://github.com/mweidner037/list-positions). It lets you add _inline formatting_ to any list from that library: bold, font size, hyperlinks, etc. Inline formatting is a key component of rich text, and you can also use it for [spreadsheet rows/columns](https://mattweidner.com/2023/09/26/crdt-survey-2.html#spreadsheet-formatting) and other lists.
 
-Each formatting _mark_ is defined in terms of `Position`s from the list-positions library. So multiple lists can share the same marks, including lists on different devices - enabling DIY collaborative rich-text editing.
+Each formatting _mark_ is defined in terms of `Position`s from the list-positions library, independent of a specific list or text string. So you can store formatting marks separately from the list itself, or share marks between multiple lists. In particular, you can share marks between lists on different devices, enabling DIY collaborative rich-text editing.
 
 ### Example Use Cases
 
 1. Standard collaborative rich-text editing.
-2. In a rich-text editor with suggested changes, you might have separate Lists for the main text and each suggestion. This library lets you query how the main list's Formatting affects each suggestion's list, so that the user can see how it will be formatted once accepted.
-3. Likewise, you could have suggested formatting marks and add/delete them to toggle between the current vs suggested formatting.
+2. Store annotations on a text document, in the style of [atJSON](https://github.com/CondeNast/atjson#what-does-a-document-look-like) but with the array indices replaced by immutable _anchors_ that automatically accommodate future edits.
+3. In a rich-text editor with suggested changes, you could store suggested formatting marks separately and use `Formatting.addMark`/`deleteMark` to toggle between the current vs suggested formatting.
 4. Server authority: A user can optimistically add a formatting mark to their local instance, send it to a server, and then delete the mark if the server rejects it (e.g., it was outside the range that the user is allowed to edit).
 
 ## Concepts

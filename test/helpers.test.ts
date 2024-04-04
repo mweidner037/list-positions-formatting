@@ -1,5 +1,6 @@
 import { assert } from "chai";
-import { BunchIDs, List, Order, Position } from "list-positions";
+import { List, Order, Position, expandPositions } from "list-positions";
+import { maybeRandomString } from "maybe-random-string";
 import { describe, test } from "mocha";
 import seedrandom from "seedrandom";
 import {
@@ -11,10 +12,10 @@ import {
 } from "../src";
 
 describe("helpers", () => {
-  let rng!: seedrandom.PRNG;
+  let prng!: seedrandom.PRNG;
 
   beforeEach(() => {
-    rng = seedrandom("42");
+    prng = seedrandom("42");
   });
 
   describe("spans and slices", () => {
@@ -27,11 +28,11 @@ describe("helpers", () => {
     beforeEach(() => {
       list = new List(
         new Order({
-          newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+          replicaID: maybeRandomString({ prng }),
         })
       );
       const startPos = list.insertAt(0, ..."0123456789")[0];
-      poss = Order.startPosToArray(startPos, 10);
+      poss = expandPositions(startPos, 10);
       partList = new List(list.order);
       for (const i of [0, 1, 3, 5, 8, 9]) {
         partList.set(poss[i], list.getAt(i));
@@ -309,7 +310,7 @@ describe("helpers", () => {
     test("all pairs", () => {
       const list = new List(
         new Order({
-          newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+          replicaID: maybeRandomString({ prng }),
         })
       );
       list.insertAt(0, ..."0123456789");

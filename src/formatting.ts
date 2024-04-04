@@ -2,6 +2,7 @@ import {
   BunchIDs,
   LexList,
   List,
+  MIN_POSITION,
   Order,
   Outline,
   Position,
@@ -188,7 +189,7 @@ export class Formatting<M extends IMark> {
     this.orderedMarks = [];
     this.formatList = new List(order);
     // Set the start anchor so you can always "go left" to find FormatData.
-    this.formatList.set(Order.MIN_POSITION, { after: new Map() });
+    this.formatList.set(MIN_POSITION, { after: new Map() });
   }
 
   /**
@@ -513,7 +514,7 @@ export class Formatting<M extends IMark> {
     this.orderedMarks = [];
     this.formatList.clear();
     // Init like in constructor.
-    this.formatList.set(Order.MIN_POSITION, { after: new Map() });
+    this.formatList.set(MIN_POSITION, { after: new Map() });
   }
 
   /**

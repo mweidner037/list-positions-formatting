@@ -34,7 +34,8 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "list-positions": "0.5.*"
+    "list-positions": "^0.6.0",
+    "maybe-random-string": "^1.0.0"
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",

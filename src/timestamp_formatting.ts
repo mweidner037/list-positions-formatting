@@ -1,4 +1,5 @@
-import { BunchIDs, Order } from "list-positions";
+import { Order } from "list-positions";
+import { maybeRandomString } from "maybe-random-string";
 import { Anchor } from "./anchor";
 import { FormatChange, Formatting, FormattingSavedState } from "./formatting";
 
@@ -112,12 +113,13 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
    * If not provided, a `new Order()` is used.
    * @param options.replicaID Our replicaID, used as all of our created marks'
    * `creatorID`. It is _not_ used by `this.order`.
-   * Default: list-positions's `BunchIDs.newReplicaID()`.
+   * Default: A random alphanumeric string from the
+   * [maybe-random-string](https://github.com/mweidner037/maybe-random-string#readme) package.
    */
   constructor(order: Order, options?: { replicaID?: string }) {
     super(order, compareTimestampMarks);
 
-    this.replicaID = options?.replicaID ?? BunchIDs.newReplicaID();
+    this.replicaID = options?.replicaID ?? maybeRandomString();
   }
 
   /**

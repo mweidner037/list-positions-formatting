@@ -1,4 +1,10 @@
-import { LexList, List, Order, Outline } from "list-positions";
+import {
+  LexList,
+  List,
+  MAX_POSITION,
+  MIN_POSITION,
+  Outline,
+} from "list-positions";
 import { Anchor, Anchors } from "./anchor";
 
 // Helper functions.
@@ -43,9 +49,7 @@ export function spanFromSlice(
   let start: Anchor;
   if (expand === "before" || expand === "both") {
     const pos =
-      startIndex === 0
-        ? Order.MIN_POSITION
-        : posList.positionAt(startIndex - 1);
+      startIndex === 0 ? MIN_POSITION : posList.positionAt(startIndex - 1);
     start = { pos, before: false };
   } else {
     start = { pos: posList.positionAt(startIndex), before: true };
@@ -54,9 +58,7 @@ export function spanFromSlice(
   let end: Anchor;
   if (expand === "after" || expand === "both") {
     const pos =
-      endIndex === list.length
-        ? Order.MAX_POSITION
-        : posList.positionAt(endIndex);
+      endIndex === list.length ? MAX_POSITION : posList.positionAt(endIndex);
     end = { pos, before: true };
   } else {
     end = { pos: posList.positionAt(endIndex - 1), before: false };

@@ -1,5 +1,14 @@
 import { assert } from "chai";
-import { BunchIDs, List, Order, Position } from "list-positions";
+import {
+  List,
+  MAX_POSITION,
+  MIN_POSITION,
+  Order,
+  Position,
+  expandPositions,
+  positionEquals,
+} from "list-positions";
+import { maybeRandomString } from "maybe-random-string";
 import { describe, test } from "mocha";
 import seedrandom from "seedrandom";
 import {
@@ -12,9 +21,9 @@ import {
 } from "../src";
 
 describe("TimestampFormatting", () => {
-  let rng!: seedrandom.PRNG;
+  let prng!: seedrandom.PRNG;
   beforeEach(() => {
-    rng = seedrandom("42");
+    prng = seedrandom("42");
   });
 
   describe("single instance", () => {
@@ -26,13 +35,13 @@ describe("TimestampFormatting", () => {
     beforeEach(() => {
       list = new List(
         new Order({
-          newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+          replicaID: maybeRandomString({ prng }),
         })
       );
       const startPos = list.insertAt(0, ..."0123456789")[0];
-      poss = Order.startPosToArray(startPos, 10);
+      poss = expandPositions(startPos, 10);
       formatting = new TimestampFormatting(list.order, {
-        replicaID: BunchIDs.newReplicaID({ rng }),
+        replicaID: maybeRandomString({ prng }),
       });
     });
 
@@ -208,7 +217,7 @@ describe("TimestampFormatting", () => {
           ]);
 
           const spans: FormattedSpan[] = [];
-          if (!Order.equalsPosition(start.pos, Order.MIN_POSITION)) {
+          if (!positionEquals(start.pos, MIN_POSITION)) {
             spans.push({
               start: Anchors.MIN_ANCHOR,
               end: start,
@@ -216,7 +225,7 @@ describe("TimestampFormatting", () => {
             });
           }
           spans.push({ start, end, format: { italic: true } });
-          if (!Order.equalsPosition(end.pos, Order.MAX_POSITION)) {
+          if (!positionEquals(end.pos, MAX_POSITION)) {
             spans.push({
               start: end,
               end: Anchors.MAX_ANCHOR,
@@ -1134,7 +1143,7 @@ describe("TimestampFormatting", () => {
         let greatestIndex = -1;
         const allMarks = new Set<TimestampMark>();
         for (let i = 0; i < 200; i++) {
-          const index = Math.floor(rng() * marks.length);
+          const index = Math.floor(prng() * marks.length);
           allMarks.add(marks[index]);
           const changes = formatting.addMark(marks[index]);
           if (index > greatestIndex) {
@@ -1183,7 +1192,7 @@ describe("TimestampFormatting", () => {
 
         // Delete some of the marks at random.
         for (let i = 0; i < 50; i++) {
-          const index = Math.floor(rng() * marks.length);
+          const index = Math.floor(prng() * marks.length);
           allMarks.delete(marks[index]);
           formatting.deleteMark(marks[index]);
         }
@@ -1905,10 +1914,10 @@ describe("TimestampFormatting", () => {
 
       // Min/max format data.
       assert.throws(() => {
-        formatting.getFormat(Order.MIN_POSITION);
+        formatting.getFormat(MIN_POSITION);
       });
       assert.throws(() => {
-        formatting.getFormat(Order.MAX_POSITION);
+        formatting.getFormat(MAX_POSITION);
       });
       assert.doesNotThrow(() => {
         formatting.getFormat(poss[0]);
@@ -1961,15 +1970,15 @@ describe("TimestampFormatting", () => {
     beforeEach(() => {
       aliceList = new List(
         new Order({
-          newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+          replicaID: maybeRandomString({ prng }),
         })
       );
       const startPos = aliceList.insertAt(0, ..."0123456789")[0];
-      poss = Order.startPosToArray(startPos, 10);
+      poss = expandPositions(startPos, 10);
 
       bobList = new List(
         new Order({
-          newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+          replicaID: maybeRandomString({ prng }),
         })
       );
       bobList.order.load(aliceList.order.save());

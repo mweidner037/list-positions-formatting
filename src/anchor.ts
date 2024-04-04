@@ -1,4 +1,13 @@
-import { LexList, List, Order, Outline, Position } from "list-positions";
+import {
+  LexList,
+  List,
+  MAX_POSITION,
+  MIN_POSITION,
+  Order,
+  Outline,
+  Position,
+  positionEquals,
+} from "list-positions";
 
 /**
  * An anchor in a list, as a JSON object.
@@ -30,18 +39,18 @@ export const Anchors = {
   /**
    * The minimum Anchor, which is after Order.MIN_POSITION.
    */
-  MIN_ANCHOR: { pos: Order.MIN_POSITION, before: false } as Anchor,
+  MIN_ANCHOR: { pos: MIN_POSITION, before: false } as Anchor,
 
   /**
    * The maximum Anchor, which is before Order.MAX_POSITION.
    */
-  MAX_ANCHOR: { pos: Order.MAX_POSITION, before: true } as Anchor,
+  MAX_ANCHOR: { pos: MAX_POSITION, before: true } as Anchor,
 
   /**
    * Returns whether two Anchors are equal, i.e., they have equal contents.
    */
   equals(a: Anchor, b: Anchor): boolean {
-    return a.before === b.before && Order.equalsPosition(a.pos, b.pos);
+    return a.before === b.before && positionEquals(a.pos, b.pos);
   },
 
   /**

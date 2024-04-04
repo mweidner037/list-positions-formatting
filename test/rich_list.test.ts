@@ -1,11 +1,12 @@
 import { assert } from "chai";
-import { BunchIDs, Order } from "list-positions";
+import { Order, expandPositions } from "list-positions";
+import { maybeRandomString } from "maybe-random-string";
 import { beforeEach, describe, test } from "mocha";
 import seedrandom from "seedrandom";
 import { Anchors, FormattedValues, RichList } from "../src";
 
 describe("RichList", () => {
-  let rng!: seedrandom.PRNG;
+  let prng!: seedrandom.PRNG;
   let alice!: RichList<string>;
   let bob!: RichList<string>;
 
@@ -17,27 +18,25 @@ describe("RichList", () => {
   }
 
   beforeEach(() => {
-    rng = seedrandom("42");
+    prng = seedrandom("42");
     alice = new RichList({
       order: new Order({
-        newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+        replicaID: maybeRandomString({ prng }),
       }),
       replicaID: "alice",
       expandRules,
     });
     bob = new RichList({
       order: new Order({
-        newBunchID: BunchIDs.usingReplicaID(BunchIDs.newReplicaID({ rng })),
+        replicaID: maybeRandomString({ prng }),
       }),
       replicaID: "bob",
       expandRules,
     });
 
     // Sync order metadata for convenience.
-    alice.order.onCreateBunch = (createdBunch) =>
-      bob.order.receive([createdBunch]);
-    bob.order.onCreateBunch = (createdBunch) =>
-      alice.order.receive([createdBunch]);
+    alice.order.onNewMeta = (newMeta) => bob.order.addMetas([newMeta]);
+    bob.order.onNewMeta = (newMeta) => alice.order.addMetas([newMeta]);
   });
 
   function checkMisc() {
@@ -180,7 +179,7 @@ describe("RichList", () => {
         { url: "www1" },
         ...values2
       );
-      const poss = Order.startPosToArray(startPos, values2.length);
+      const poss = expandPositions(startPos, values2.length);
       assert.deepStrictEqual(alice.formattedValues(), [
         {
           startIndex: 0,
@@ -406,7 +405,7 @@ describe("RichList", () => {
       const [createdMark] = bob.format(0, bob.list.length, "bold", true);
 
       // Sync changes and check results.
-      for (const pos of Order.startPosToArray(startPos, 4)) {
+      for (const pos of expandPositions(startPos, 4)) {
         bob.list.set(pos, alice.list.get(pos)!);
       }
       alice.formatting.addMark(createdMark);

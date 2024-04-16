@@ -1,7 +1,8 @@
 import {
   BunchIDs,
-  LexList,
+  AbsList,
   List,
+  Text,
   MIN_POSITION,
   Order,
   Outline,
@@ -713,11 +714,11 @@ export class Formatting<M extends IMark> {
    * [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
    */
   formattedSlices(
-    list: List<unknown> | LexList<unknown> | Outline,
+    list: List<unknown> | Text | Outline | AbsList<unknown>,
     startIndex?: number,
     endIndex?: number
   ): FormattedSlice[] {
-    const posList = list instanceof LexList ? list.list : list;
+    const posList = list instanceof AbsList ? list.list : list;
 
     const range = normalizeSliceRange(posList.length, startIndex, endIndex);
     if (range === null) return [];

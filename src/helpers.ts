@@ -1,8 +1,9 @@
 import {
-  LexList,
+  AbsList,
   List,
   MAX_POSITION,
   MIN_POSITION,
+  Text,
   Outline,
 } from "list-positions";
 import { Anchor, Anchors } from "./anchor";
@@ -35,7 +36,7 @@ import { Anchor, Anchors } from "./anchor";
  * @throws If startIndex >= endIndex (the slice is empty).
  */
 export function spanFromSlice(
-  list: List<unknown> | LexList<unknown> | Outline,
+  list: List<unknown> | Text | Outline | AbsList<unknown>,
   startIndex: number,
   endIndex: number,
   expand: "after" | "before" | "both" | "none" = "after"
@@ -44,7 +45,7 @@ export function spanFromSlice(
     throw new Error(`startIndex >= endIndex: ${startIndex}, ${endIndex}`);
   }
 
-  const posList = list instanceof LexList ? list.list : list;
+  const posList = list instanceof AbsList ? list.list : list;
 
   let start: Anchor;
   if (expand === "before" || expand === "both") {
@@ -75,7 +76,7 @@ export function spanFromSlice(
  * (endIndex not included), like arguments to [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
  */
 export function sliceFromSpan(
-  list: List<unknown> | LexList<unknown> | Outline,
+  list: List<unknown> | Text | Outline | AbsList<unknown>,
   start: Anchor,
   end: Anchor
 ): { startIndex: number; endIndex: number } {

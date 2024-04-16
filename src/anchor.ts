@@ -1,6 +1,7 @@
 import {
-  LexList,
+  AbsList,
   List,
+  Text,
   MAX_POSITION,
   MIN_POSITION,
   Order,
@@ -88,10 +89,10 @@ export const Anchors = {
    * to an inverse for this function.
    */
   indexOfAnchor(
-    list: List<unknown> | LexList<unknown> | Outline,
+    list: List<unknown> | Text | Outline | AbsList<unknown>,
     anchor: Anchor
   ): number {
-    const posList = list instanceof LexList ? list.list : list;
+    const posList = list instanceof AbsList ? list.list : list;
     return anchor.before
       ? posList.indexOfPosition(anchor.pos, "right")
       : posList.indexOfPosition(anchor.pos, "left") + 1;

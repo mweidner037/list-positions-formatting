@@ -9,7 +9,7 @@ import {
 import { Anchor, Anchors } from "./anchor";
 
 // Helper functions.
-// See RichList for example usage.
+// See RichText for example usage.
 
 /**
  * Returns a span `{ start: Anchor, end: Anchor }` that covers precisely
@@ -93,7 +93,7 @@ export function sliceFromSpan(
  * Note that the map may contain null
  * values; when used in marks, these delete their keys.
  *
- * See also: RichList.insertWithFormat, which uses this function to ensure that
+ * See also: RichText.insertWithFormat, which uses this function to ensure that
  * newly-inserted values have the desired format.
  */
 export function diffFormats(

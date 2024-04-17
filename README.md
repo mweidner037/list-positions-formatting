@@ -124,27 +124,27 @@ To create a TimestampMark, use `TimestampFormatting.newMark`.
 
 TimestampFormatting's sort order uses [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp), with ties broken by `creatorID`. This sort order works well in general, including in collaborative settings with or without a central server.
 
-### Class RichList
+### Class RichText
 
-Convenience wrapper for a List with TimestampFormatting.
+Convenience wrapper for [Text](https://github.com/mweidner037/list-positions#text) with TimestampFormatting.
 
-RichList has an API similar to a traditional rich-text data structure, combining indexed access, values, and formatting in a single object. E.g., it has a `getFormatAt(index)` method.
+RichText has an API similar to a traditional rich-text data structure, combining indexed access, values, and formatting in a single object. E.g., it has a `getFormatAt(index)` method.
 
 Notable methods:
 
 - `insertWithFormat(index, format, ...values)`: Inserts values and applies new formatting marks as needed so that the values have the exact given format. This is a common operation when working with a rich-text editor: the editor tells you to insert some new values and what format they should have.
 - `format(startIndex, endIndex, key, value, expand?)`: Formats the slice from `startIndex` to `endIndex` so that the given format key maps to `value`, by adding a new mark.
-- `formattedValues()`: Returns an efficient representation of the list's values and their current formatting. It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
+- `formattedChars()`: Returns an efficient representation of the text's characters and their current formatting. It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
 
-For other operations, you act on the List or TimestampFormatting directly. E.g., to delete a value, call `richList.list.deleteAt(index)`; to add a mark received from a collaborator, call `richList.formatting.addMark(mark)`.
+For other operations, you act on the Text or TimestampFormatting directly. E.g., to delete a value, call `richText.text.deleteAt(index)`; to add a mark received from a collaborator, call `richText.formatting.addMark(mark)`.
 
-RichList's `save()` and `load(savedState)` methods save the List, TimestampFormatting, and Order (metadata) states in a single JSON object. You can also save and load them separately.
+RichText's `save()` and `load(savedState)` methods save the Text, TimestampFormatting, and Order (metadata) states in a single JSON object. You can also save and load them separately.
 
-If you don't want to use RichList (e.g., because you are using an Outline instead of a List, or marks besides TimestampMarks), you can access the same functionality using the [Utilities](#utilities) below. Consider reading the [RichList source code](./src/rich_list.ts).
+If you don't want to use RichText (e.g., because you are using an List or Outline instead of a Text), you can access the same functionality using the [Utilities](#utilities) below. Consider reading the [RichText source code](./src/rich_text.ts).
 
 ### Utilities
 
-- `diffFormats(current, target)`: Returns changes (including null for deletions) to turn the `current` format into `target`. Core logic behind `RichList.insertWithFormat`.
+- `diffFormats(current, target)`: Returns changes (including null for deletions) to turn the `current` format into `target`. Core logic behind `RichText.insertWithFormat`.
 - `sliceFromSpan`, `spanFromSlice`: Convert between list-independent spans `{ start: Anchor, end: Anchor }` and list-specific slices `{ startIndex: number, endIndex: number }`.
 - `Anchors` static object: min and max Anchors, `equals` and `compare` functions for Anchors, and `indexOfAnchor`.
 

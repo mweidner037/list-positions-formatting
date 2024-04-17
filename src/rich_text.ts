@@ -1,10 +1,10 @@
 import {
   BunchMeta,
-  List,
-  ListSavedState,
   Order,
   OrderSavedState,
   Position,
+  Text,
+  TextSavedState,
 } from "list-positions";
 import { FormatChange, FormattedSlice } from "./formatting";
 import { diffFormats, spanFromSlice } from "./helpers";
@@ -15,10 +15,10 @@ import {
 } from "./timestamp_formatting";
 
 /**
- * A slice of values with a single format, returned by
- * {@link RichList.formattedValues}.
+ * A slice of chars with a single format, returned by
+ * {@link RichText.formattedChars}.
  */
-export type FormattedValues<T> = {
+export type FormattedChars = {
   /**
    * The slice's starting index (inclusive).
    */
@@ -28,68 +28,68 @@ export type FormattedValues<T> = {
    */
   readonly endIndex: number;
   /**
-   * The slice's values, i.e., `richList.list.slice(startIndex, endIndex)`.
+   * The slice's chars, i.e., `richText.text.slice(startIndex, endIndex)`.
    */
-  readonly values: T[];
+  readonly chars: string;
   /**
-   * The common format for all of the slice's values.
+   * The common format for all of the slice's chars.
    */
   readonly format: Record<string, any>;
 };
 
 /**
- * A JSON-serializable saved state for a `RichList<T>`.
+ * A JSON-serializable saved state for a `RichText<T>`.
  *
- * See RichList.save and RichList.load.
+ * See RichText.save and RichText.load.
  *
  * ### Format
  *
- * For advanced usage, you may read and write RichListSavedStates directly.
+ * For advanced usage, you may read and write RichTextSavedStates directly.
  *
  * The format is merely a `...SavedState` object for each of:
- * - `richList.order` (class Order from [list-positions](https://github.com/mweidner037/list-positions#readme)).
- * - `richList.list` (class List from [list-positions](https://github.com/mweidner037/list-positions#readme)).
- * - `richList.formatting` (class TimestampFormatting).
+ * - `richText.order` (class Order from [list-positions](https://github.com/mweidner037/list-positions#readme)).
+ * - `richText.text` (class Text from [list-positions](https://github.com/mweidner037/list-positions#readme)).
+ * - `richText.formatting` (class TimestampFormatting).
  */
-export type RichListSavedState<T> = {
+export type RichTextSavedState = {
   readonly order: OrderSavedState;
-  readonly list: ListSavedState<T>;
+  readonly text: TextSavedState;
   readonly formatting: TimestampFormattingSavedState;
 };
 
 /**
- * Convenience wrapper for a List with TimestampFormatting.
+ * Convenience wrapper for [Text](https://github.com/mweidner037/list-positions#text) with TimestampFormatting.
  *
- * See [RichList](https://github.com/mweidner037/list-formatting#class-richlist) in the readme.
+ * See [RichText](https://github.com/mweidner037/list-formatting#class-richtext) in the readme.
  *
- * RichList has an API similar to a traditional rich-text data structure,
- * combining indexed access, values, and formatting in a single object.
+ * RichText has an API similar to a traditional rich-text data structure,
+ * combining indexed access, characters, and formatting in a single object.
  *
- * For operations that only involve `this.list` or `this.formatting`, call methods
+ * For operations that only involve `this.text` or `this.formatting`, call methods
  * on those properties directly.
  */
-export class RichList<T> {
+export class RichText {
   /**
-   * The Order that manages this RichList's Positions and their metadata.
+   * The Order that manages this RichText's Positions and their metadata.
    *
    * See list-positions's [List, Position, and Order](https://github.com/mweidner037/list-positions#list-position-and-order).
    */
   readonly order: Order;
   /**
-   * The list of values.
+   * The plain-text characters.
    *
-   * You may read and write this List directly. RichList is merely a wrapper
+   * You may read and write this Text directly. RichText is merely a wrapper
    * that provides some convenience methods - in particular,
-   * `insertWithFormat`, which wraps `list.insertAt` to ensure
+   * `insertWithFormat`, which wraps `text.insertAt` to ensure
    * a given format.
    */
-  readonly list: List<T>;
+  readonly text: Text;
   /**
-   * The list's formatting.
+   * The text's formatting.
    *
-   * You may read and write this TimestampFormatting directly. RichList is
+   * You may read and write this TimestampFormatting directly. RichText is
    * merely a wrapper that provides some convenience methods - in particular,
-   * `format` and `formattedValues`, which handle index/Anchor conversions for you.
+   * `format` and `formattedChars`, which handle index/Anchor conversions for you.
    */
   readonly formatting: TimestampFormatting;
 
@@ -112,14 +112,14 @@ export class RichList<T> {
   onNewMarks: ((newMarks: TimestampMark[]) => void) | undefined = undefined;
 
   /**
-   * Constructs a RichList.
+   * Constructs a RichText.
    *
-   * @param options.order The Order to use for `this.order`. Both `this.list`
+   * @param options.order The Order to use for `this.order`. Both `this.text`
    * and `this.formatting` share the order. If neither `options.order` nor
-   * `options.list` are provided, a `new Order()` is used.
-   * Exclusive with `options.list`.
-   * @param options.list The List to use for `this.list`. If not provided,
-   * a `new List(options?.order)` is used. Exclusive with `options.order`.
+   * `options.text` are provided, a `new Order()` is used.
+   * Exclusive with `options.text`.
+   * @param options.text The Text to use for `this.text`. If not provided,
+   * a `new Text(options?.order)` is used. Exclusive with `options.order`.
    * @param options.replicaID The replica ID for `this.formatting`
    * (_not_ `this.order`). All of our created marks will use it as their
    * `creatorID`. Default: A random alphanumeric string from the
@@ -131,22 +131,22 @@ export class RichList<T> {
    */
   constructor(options?: {
     order?: Order;
-    list?: List<T>;
+    text?: Text;
     replicaID?: string;
     expandRules?: (
       key: string,
       value: any
     ) => "after" | "before" | "none" | "both";
   }) {
-    if (options?.list !== undefined) {
+    if (options?.text !== undefined) {
       if (options.order !== undefined) {
-        throw new Error("list and order options are exclusive");
+        throw new Error("text and order options are exclusive");
       }
-      this.list = options.list;
-      this.order = this.list.order;
+      this.text = options.text;
+      this.order = this.text.order;
     } else {
       this.order = options?.order ?? new Order();
-      this.list = new List(this.order);
+      this.text = new Text(this.order);
     }
     this.formatting = new TimestampFormatting(this.order, {
       replicaID: options?.replicaID,
@@ -155,9 +155,9 @@ export class RichList<T> {
   }
 
   /**
-   * Inserts the given value at `index` using `this.list.insertAt`,
+   * Inserts the given char at `index` using `this.text.insertAt`,
    * and applies new formatting marks
-   * as needed so that the value has the exact given format.
+   * as needed so that the char has the exact given format.
    *
    * @returns [insertion Position,
    * [new bunch's BunchMeta](https://github.com/mweidner037/list-positions#newMeta) (or null),
@@ -166,33 +166,33 @@ export class RichList<T> {
   insertWithFormat(
     index: number,
     format: Record<string, any>,
-    value: T
+    char: string
   ): [pos: Position, newMeta: BunchMeta | null, newMarks: TimestampMark[]];
   /**
-   * Inserts the given values at `index` using `this.list.insertAt`,
+   * Inserts the given chars at `index` using `this.text.insertAt`,
    * and applies new formatting marks
-   * as needed so that the values have the exact given format.
+   * as needed so that the chars have the exact given format.
    *
    * @returns [starting insertion Position,
    * [new bunch's BunchMeta](https://github.com/mweidner037/list-positions#newMeta) (or null),
    * newformatting marks]
-   * @throws If no values are provided.
+   * @throws If no chars are provided.
    */
   insertWithFormat(
     index: number,
     format: Record<string, any>,
-    ...values: T[]
+    chars: string
   ): [startPos: Position, newMeta: BunchMeta | null, newMarks: TimestampMark[]];
   insertWithFormat(
     index: number,
     format: Record<string, any>,
-    ...values: T[]
+    chars: string
   ): [
     startPos: Position,
     newMeta: BunchMeta | null,
     newMarks: TimestampMark[]
   ] {
-    const [startPos, newMeta] = this.list.insertAt(index, ...values);
+    const [startPos, newMeta] = this.text.insertAt(index, chars);
     // Inserted positions all get the same initial format because they are not
     // interleaved with any existing positios.
     const needsFormat = diffFormats(
@@ -204,9 +204,9 @@ export class RichList<T> {
       const expand =
         this.expandRules === undefined ? "after" : this.expandRules(key, value);
       const { start, end } = spanFromSlice(
-        this.list,
+        this.text,
         index,
-        index + values.length,
+        index + chars.length,
         expand
       );
       const mark = this.formatting.newMark(start, end, key, value);
@@ -223,14 +223,14 @@ export class RichList<T> {
   }
 
   /**
-   * Formats the slice `this.list.slice(startIndex, endIndex)`,
+   * Formats the slice `this.text.slice(startIndex, endIndex)`,
    * setting the given format key to value.
    *
    * This method always creates a new mark, even if it is redundant.
    *
    * The mark covers all positions from
-   * `this.list.positionAt(startIndex)` to `this.list.positionAt(endIndex - 1)` inclusive,
-   * including positions that are not currently present in `this.list`.
+   * `this.text.positionAt(startIndex)` to `this.text.positionAt(endIndex - 1)` inclusive,
+   * including positions that are not currently present in `this.text`.
    * It may also "expand" to cover not-currently-present positions at
    * the slice's endpoints, depending on the value of `expand`.
    *
@@ -238,11 +238,11 @@ export class RichList<T> {
    * the slice's endpoints. If not provided, the output of the constructor's
    * `options.expandRules` function is used, which defaults to "after".
    * - "after": The mark expands to cover positions at the end, i.e.,
-   * between `this.list.positionAt(endIndex - 1)` and `this.list.positionAt(endIndex)`.
+   * between `this.text.positionAt(endIndex - 1)` and `this.text.positionAt(endIndex)`.
    * This is the typical behavior for most rich-text format keys (e.g. bold): the
    * formatting also affects future (& concurrent) characters inserted at the end.
    * - "before": Expands to cover positions at the beginning, i.e.,
-   * between `this.list.positionAt(startIndex - 1)` and `this.list.positionAt(startIndex)`.
+   * between `this.text.positionAt(startIndex - 1)` and `this.text.positionAt(startIndex)`.
    * - "both": Combination of "before" and "after".
    * - "none": Does not expand.
    * This is the typical behavior for certain rich-text format keys, such as hyperlinks.
@@ -260,7 +260,7 @@ export class RichList<T> {
         this.expandRules === undefined ? "after" : this.expandRules(key, value);
     }
 
-    const { start, end } = spanFromSlice(this.list, startIndex, endIndex);
+    const { start, end } = spanFromSlice(this.text, startIndex, endIndex);
     const mark = this.formatting.newMark(start, end, key, value);
     const changes = this.formatting.addMark(mark);
     this.onNewMarks?.([mark]);
@@ -268,13 +268,13 @@ export class RichList<T> {
   }
 
   /**
-   * Clears `this.list` and `this.formatting`, so that this RichList
-   * has no values and no marks.
+   * Clears `this.text` and `this.formatting`, so that this RichText
+   * has no chars and no marks.
    *
    * `this.order` is unaffected (retains all metadata).
    */
   clear() {
-    this.list.clear();
+    this.text.clear();
     this.formatting.clear();
   }
 
@@ -282,106 +282,108 @@ export class RichList<T> {
    * Returns the current format at index.
    */
   getFormatAt(index: number): Record<string, any> {
-    return this.formatting.getFormat(this.list.positionAt(index));
+    return this.formatting.getFormat(this.text.positionAt(index));
   }
 
   /**
-   * Iterates over an efficient representation of this RichList's values and their current
+   * Iterates over an efficient representation of this RichText's chars and their current
    * formatting.
    *
-   * Same as {@link formattedValues}.
+   * Same as {@link formattedChars}.
    */
-  [Symbol.iterator](): IterableIterator<FormattedValues<T>> {
-    return this.formattedValues()[Symbol.iterator]();
+  [Symbol.iterator](): IterableIterator<FormattedChars> {
+    return this.formattedChars()[Symbol.iterator]();
   }
 
   /**
-   * Returns an efficient representation of this RichList's values and their current
+   * Returns an efficient representation of this RichText's chars and their current
    * formatting.
    *
-   * Specifically, this method returns an array of FormattedValues objects in list order.
-   * Each object describes a slice of values with a single format.
+   * Specifically, this method returns an array of FormattedChars objects in list order.
+   * Each object describes a slice of chars with a single format.
    * It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
    *
    * Optionally, you may specify a range of indices `[start, end)` instead of
    * iterating the entire list.
    *
-   * @throws If `start < 0`, `end > this.list.length`, or `start > end`.
+   * @throws If `start < 0`, `end > this.text.length`, or `start > end`.
    */
-  formattedValues(start?: number, end?: number): FormattedValues<T>[] {
+  formattedChars(start?: number, end?: number): FormattedChars[] {
     const slices = this.formatting.formattedSlices(
-      this.list,
+      this.text,
       start,
       end
-    ) as (FormattedSlice & { values?: T[] })[];
+    ) as (FormattedSlice & { chars?: string })[];
     if (slices.length === 0) return [];
 
-    const values = this.list.slice(start, end);
-    const valuesStart = slices[0].startIndex;
+    const chars = this.text.slice(start, end);
+    const charsStart = slices[0].startIndex;
     for (const slice of slices) {
       // slice only appears here, so it's okay to modify it in-place.
-      slice.values = values.slice(
-        slice.startIndex - valuesStart,
-        slice.endIndex - valuesStart
+      slice.chars = chars.slice(
+        slice.startIndex - charsStart,
+        slice.endIndex - charsStart
       );
     }
-    return slices as FormattedValues<T>[];
+    return slices as FormattedChars[];
   }
 
   /**
-   * Iterators over [position, value, format] tuples for every
-   * value in the list, in list order.
+   * Iterators over [position, char, format] tuples in the list, in list order.
+   * These are its entries as a formatted & ordered map.
    *
-   * Typically, you should instead use `formattedValues()`, which returns a
-   * more efficient representation of the formatted values.
+   * Typically, you should instead use `formattedChars()`, which returns a
+   * more efficient representation of the formatted chars.
    *
    * Optionally, you may specify a range of indices `[start, end)` instead of
    * iterating the entire list.
    *
-   * @throws If `start < 0`, `end > this.list.length`, or `start > end`.
+   * @throws If `start < 0`, `end > this.text.length`, or `start > end`.
    */
   *entries(
     start?: number,
     end?: number
-  ): IterableIterator<[pos: Position, value: T, format: Record<string, any>]> {
-    for (const values of this.formattedValues(start, end)) {
-      for (let index = values.startIndex; index < values.endIndex; index++) {
-        const pos = this.list.positionAt(index);
-        yield [pos, values.values[index - values.startIndex], values.format];
+  ): IterableIterator<
+    [pos: Position, char: string, format: Record<string, any>]
+  > {
+    for (const chars of this.formattedChars(start, end)) {
+      for (let index = chars.startIndex; index < chars.endIndex; index++) {
+        const pos = this.text.positionAt(index);
+        yield [pos, chars.chars[index - chars.startIndex], chars.format];
       }
     }
   }
 
   /**
-   * Returns a saved state for this RichList.
+   * Returns a saved state for this RichText.
    *
-   * The saved state describes our current list and formatting, plus
+   * The saved state describes our current text and formatting, plus
    * [Order metadata](https://github.com/mweidner037/list-positions#managing-metadata),
-   * in JSON-serializable form. You can load this state on another RichList
+   * in JSON-serializable form. You can load this state on another RichText
    * by calling `load(savedState)`, possibly in a different session or on a
    * different device.
    *
-   * Note: You can instead save and load each component (`this.order`, `this.list`,
+   * Note: You can instead save and load each component (`this.order`, `this.text`,
    * and `this.formatting`) separately. If you do so, be sure to load `this.order`
    * before the others.
    */
-  save(): RichListSavedState<T> {
+  save(): RichTextSavedState {
     return {
       order: this.order.save(),
-      list: this.list.save(),
+      text: this.text.save(),
       formatting: this.formatting.save(),
     };
   }
 
   /**
-   * Loads a saved state returned by another RichList's `save()` method.
+   * Loads a saved state returned by another RichText's `save()` method.
    *
-   * Loading sets our list and formatting to match the saved RichList's,
+   * Loading sets our text and formatting to match the saved RichText's,
    * *overwriting* our current state.
    */
-  load(savedState: RichListSavedState<T>): void {
+  load(savedState: RichTextSavedState): void {
     this.order.load(savedState.order);
-    this.list.load(savedState.list);
+    this.text.load(savedState.text);
     this.formatting.load(savedState.formatting);
   }
 }

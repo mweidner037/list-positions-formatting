@@ -76,7 +76,7 @@ The general principles are:
 
 1. Each mark affects all positions between its `start` and `end` anchors.
 2. Overlapping marks for different keys don't interact with each other. Instead, they combine to give multi-key formats like `{ bold: true, "font-size": 12 }`.
-3. Overlapping marks for the _same_ key are sorted in some way, e.g., using a timestamp. The greatest mark under this sort order is the "winner" and determines the current value. (You choose the sort order by extending the `IMark` interface with extra fields and supplying a `compareMarks` function that uses those fields.)
+3. Overlapping marks for the _same_ key are sorted in some way, e.g., using a timestamp (see [TimestampFormatting](#class-timestampformatting) below). The greatest mark under this sort order is the "winner" and determines the current value.
 
 The sort order is how you override an existing mark, e.g., changing the font size from 12 to 16: you create a new mark that "wins" over the existing mark.
 
@@ -85,28 +85,28 @@ Formally, given the current set of marks, the current format at a position `pos`
 - For each format key `key`, find the greatest mark such that `mark.key = key` and the mark _covers_ `pos` (`mark.start < pos < mark.end`).
 - If `mark.value` is not null, then add the entry `{ key: mark.value }` to the format object. Otherwise, `key` is not present in the object.
 
-The null-value rule lets you delete a format key: for example, to change a range's format from `{ bold: true }` to `{}` (unbolding), add a new, winning mark with `mark.key = "bold"` and `mark.value = null`.
+The null-value rule lets you delete a format key: e.g., to change a range's format from `{ bold: true }` to `{}` (unbolding), add a new mark with `{ key: "bold", value: null }`.
 
 ## API
 
 ### Class Formatting
 
-Class `Formatting<M extends IMark>` implements the above marks-to-formatting procedure. It is a local data structure storing a set of marks. Mutate the set using `addMark(mark)` and `deleteMark(mark)`. Other methods let you query the formatting resulting from the current set of marks:
+Class `Formatting<M extends IMark>` implements the above marks-to-formatting procedure. It is a local data structure storing a set of marks. Mutate the set using `addMark(mark)` and `deleteMark(mark)`. Other methods let you query the formatting that results from the current set of marks:
 
 - `getFormat(pos)` returns the current format object at a Position.
-- `formattedSlices(list)` returns an efficient representation of the complete current Formatting state projected onto a specific list `list`. Specifically, it returns an array of _slices_ in list order, where each slice is a list range `{ startIndex: number, endIndex: number }` with a single format. Use the optional arguments `startIndex?, endIndex?` to restrict to part of `list`.
-- `formattedSpans()` returns an efficient representation of the complete current Formatting state, independent of a specific list. Specifically, it returns an array of _spans_ in list order, where each span is a range `{ start: Anchor, end: Anchor }` with a single format. Use the optional arguments `start?, end?` to restrict to part of the order.
+- `formattedSlices(list)` returns an efficient representation of the current formatting projected onto a specific list `list`. Specifically, it returns an array of _slices_ in list order, where each slice is a list range `{ startIndex: number, endIndex: number }` with a single format.
+- `formattedSpans()` returns an efficient representation of the current formatting, independent of a specific list. Specifically, it returns an array of _spans_ in list order, where each span is a range `{ start: Anchor, end: Anchor }` with a single format.
 
 Class Formatting does not specify the sort order on marks. Instead, you choose the sort order, by extending the `IMark` interface with extra fields (type parameter `M`) and supplying a `compareMarks` function that uses those fields. Alternatively, you can use the [TimestampFormatting](#class-timestampformatting) class, which chooses a reasonable default sort order.
 
 Misc features:
 
-- `addMark` and `deleteMark` return changes to the current winning formatting.
+- `addMark` and `deleteMark` return changes to the current formatting.
 - `save()` and `load(savedState)` save and load the current set of marks, similar to list-positions's save and load methods.
 - `getActiveMarks(pos)` and `getAllMarks(pos)` give you more info about the marks covering a given Position.
 - There is no way to modify an existing mark, and you should avoid modifying IMark objects in-place. Instead, delete the current mark and add a modified version.
 
-**Warning:** Similar to list-positions's List class, you must [manage metadata](https://github.com/mweidner037/list-positions#managing-metadata) for a Formatting instance. Typically, you're already managing metadata for a List/Outline/LexList storing your actual values; it is then sufficient to share that list's `Order` with your Formatting instance, via the `order` constructor argument.
+**Warning:** Similar to list-positions's List class, you must [manage metadata](https://github.com/mweidner037/list-positions#managing-metadata) for a Formatting instance. Typically, you're already managing metadata for a List/Text/Outline/AbsList storing your actual values; it is then sufficient to share that list's `Order` with your Formatting instance, via the `order` constructor argument.
 
 ### Class TimestampFormatting
 
@@ -139,10 +139,10 @@ RichList has an API similar to a traditional rich-text data structure, combining
 Notable methods:
 
 - `insertWithFormat(index, format, ...values)`: Inserts values and applies new formatting marks as needed so that the values have the exact given format. This is a common operation when working with a rich-text editor: the editor tells you to insert some new values and what format they should have.
-- `format(startIndex, endIndex, key, value, expand?)`: Formats the slice from startIndex to endIndex so that the given format key maps to `value`, by adding a new mark.
+- `format(startIndex, endIndex, key, value, expand?)`: Formats the slice from `startIndex` to `endIndex` so that the given format key maps to `value`, by adding a new mark.
 - `formattedValues()`: Returns an efficient representation of the list's values and their current formatting. It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
 
-For other operations, you act on the List (`.list`) or TimestampFormatting (`.formatting`) directly. E.g., to delete a value, call `richList.list.deleteAt(index)`; to add a mark received from a collaborator, call `richList.formatting.addMark(mark)`.
+For other operations, you act on the List or TimestampFormatting directly. E.g., to delete a value, call `richList.list.deleteAt(index)`; to add a mark received from a collaborator, call `richList.formatting.addMark(mark)`.
 
 RichList's `save()` and `load(savedState)` methods save the List, TimestampFormatting, and Order (metadata) states in a single JSON object. You can also save and load them separately.
 
@@ -150,9 +150,9 @@ If you don't want to use RichList (e.g., because you are using an Outline instea
 
 ### Utilities
 
-- `Anchors` static object: min and max Anchors, `equals` and `compare` functions for Anchors, and `indexOfAnchor`.
 - `diffFormats(current, target)`: Returns changes (including null for deletions) to turn the `current` format into `target`. Core logic behind `RichList.insertWithFormat`.
 - `sliceFromSpan`, `spanFromSlice`: Convert between list-independent spans `{ start: Anchor, end: Anchor }` and list-specific slices `{ startIndex: number, endIndex: number }`.
+- `Anchors` static object: min and max Anchors, `equals` and `compare` functions for Anchors, and `indexOfAnchor`.
 
 ## Performance
 

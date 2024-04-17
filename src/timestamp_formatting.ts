@@ -110,7 +110,6 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
    * @param order The Order to use for `this.order`.
    * Typically, it should be shared with the list(s) that this
    * is formatting.
-   * If not provided, a `new Order()` is used.
    * @param options.replicaID Our replicaID, used as all of our created marks'
    * `creatorID`. It is _not_ used by `this.order`.
    * Default: A random alphanumeric string from the

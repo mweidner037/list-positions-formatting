@@ -182,7 +182,6 @@ export class Formatting<M extends IMark> {
    * @param order The Order to use for `this.order`.
    * Typically, it should be shared with the list(s) that this
    * is formatting.
-   * If not provided, a `new Order()` is used.
    * @param compareMarks The function to use for `this.compareMarks`.
    */
   constructor(readonly order: Order, compareMarks: (a: M, b: M) => number) {

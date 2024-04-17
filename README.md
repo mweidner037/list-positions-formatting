@@ -10,7 +10,7 @@ Inline formatting for a list, e.g., collaborative rich text
 
 ## About
 
-This library complements [list-positions](https://github.com/mweidner037/list-positions). It lets you add _inline formatting_ to any list from that library: bold, font size, hyperlinks, etc. Inline formatting is a key component of rich text, and you can also use it for [spreadsheet rows/columns](https://mattweidner.com/2023/09/26/crdt-survey-2.html#spreadsheet-formatting) and other lists.
+This library complements [list-positions](https://github.com/mweidner037/list-positions#readme). It lets you add _inline formatting_ to any list from that library: bold, font size, hyperlinks, etc. Inline formatting is a key component of rich text, and you can also use it for [spreadsheet rows/columns](https://mattweidner.com/2023/09/26/crdt-survey-2.html#spreadsheet-formatting) and other lists.
 
 Each formatting _mark_ is defined in terms of `Position`s from the list-positions library, independent of a specific list or text string. So you can store formatting marks separately from the list itself, or share marks between multiple lists. In particular, you can share marks between lists on different devices, enabling DIY collaborative rich-text editing.
 
@@ -97,7 +97,7 @@ Class `Formatting<M extends IMark>` implements the above marks-to-formatting pro
 - `formattedSlices(list)` returns an efficient representation of the complete current Formatting state projected onto a specific list `list`. Specifically, it returns an array of _slices_ in list order, where each slice is a list range `{ startIndex: number, endIndex: number }` with a single format. Use the optional arguments `startIndex?, endIndex?` to restrict to part of `list`.
 - `formattedSpans()` returns an efficient representation of the complete current Formatting state, independent of a specific list. Specifically, it returns an array of _spans_ in list order, where each span is a range `{ start: Anchor, end: Anchor }` with a single format. Use the optional arguments `start?, end?` to restrict to part of the order.
 
-Class Formatting does not specify the sort order on marks. Instead, you choose the sort order, by extending the `IMark` interface with extra fields (type parameter `M`) and supplying a `compareMarks` function that uses those fields. Alternatively, you can use the [TimestampFormatting](#class-timestamp-formatting) class, which chooses a reasonable default sort order.
+Class Formatting does not specify the sort order on marks. Instead, you choose the sort order, by extending the `IMark` interface with extra fields (type parameter `M`) and supplying a `compareMarks` function that uses those fields. Alternatively, you can use the [TimestampFormatting](#class-timestampformatting) class, which chooses a reasonable default sort order.
 
 Misc features:
 

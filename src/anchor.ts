@@ -26,7 +26,7 @@ import {
  */
 export type Anchor = {
   /**
-   * The anchor's Position, from the [list-positions](https://github.com/mweidner037/list-positions)
+   * The anchor's Position, from the [list-positions](https://github.com/mweidner037/list-positions#readme)
    * library.
    */
   readonly pos: Position;

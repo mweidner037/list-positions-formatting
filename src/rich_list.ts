@@ -49,8 +49,8 @@ export type FormattedValues<T> = {
  * For advanced usage, you may read and write RichListSavedStates directly.
  *
  * The format is merely a `...SavedState` object for each of:
- * - `richList.order` (class Order from [list-positions](https://github.com/mweidner037/list-positions)).
- * - `richList.list` (class List from [list-positions](https://github.com/mweidner037/list-positions)).
+ * - `richList.order` (class Order from [list-positions](https://github.com/mweidner037/list-positions#readme)).
+ * - `richList.list` (class List from [list-positions](https://github.com/mweidner037/list-positions#readme)).
  * - `richList.formatting` (class TimestampFormatting).
  */
 export type RichListSavedState<T> = {
@@ -161,8 +161,8 @@ export class RichList<T> {
    * as needed so that the value has the exact given format.
    *
    * @returns [insertion Position,
-   * [created bunch's](https://github.com/mweidner037/list-positions#createdBunch)
-   * BunchMeta (or null), created formatting marks]
+   * [new bunch's BunchMeta](https://github.com/mweidner037/list-positions#newMeta) (or null),
+   * created formatting marks]
    */
   insertWithFormat(
     index: number,
@@ -179,8 +179,8 @@ export class RichList<T> {
    * as needed so that the values have the exact given format.
    *
    * @returns [starting Position,
-   * [created bunch's](https://github.com/mweidner037/list-positions#createdBunch)
-   * BunchMeta (or null), created formatting marks]
+   * [new bunch's BunchMeta](https://github.com/mweidner037/list-positions#newMeta) (or null),
+   * created formatting marks]
    * @throws If no values are provided.
    */
   insertWithFormat(

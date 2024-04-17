@@ -44,7 +44,7 @@ export interface IMark {
 }
 
 /**
- * A span with a single format, returned by {@link Formatting.formattedSpans}
+ * A span with a single format, returned by {@link Formatting.formattedSpans}.
  *
  * The span is independent of any particular list.
  */

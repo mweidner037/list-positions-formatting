@@ -150,7 +150,7 @@ If you don't want to use RichList (e.g., because you are using an Outline instea
 
 ### Utilities
 
-- `Anchors` static object: min and max Anchors, `equals` function for Anchors, and `indexOfAnchor`.
+- `Anchors` static object: min and max Anchors, `equals` and `compare` functions for Anchors, and `indexOfAnchor`.
 - `diffFormats(current, target)`: Returns changes (including null for deletions) to turn the `current` format into `target`. Core logic behind `RichList.insertWithFormat`.
 - `sliceFromSpan`, `spanFromSlice`: Convert between list-independent spans `{ start: Anchor, end: Anchor }` and list-specific slices `{ startIndex: number, endIndex: number }`.
 

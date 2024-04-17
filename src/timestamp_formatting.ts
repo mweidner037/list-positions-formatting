@@ -109,7 +109,7 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
   }
 
   /**
-   * Creates and returns a unique new TimestampMark. The mark is _not_
+   * Creates and returns a unique new TimestampMark. The mark is __not__
    * added to our set of marks; you must call `this.addMark` separately.
    *
    * The mark's timestamp is greater than that of all previously created or added marks,

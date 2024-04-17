@@ -102,14 +102,14 @@ export class RichList<T> {
    * Event handler that you can set to be notified when `this.format` or
    * `this.insertWithFormat` creates a mark.
    *
-   * It is called with the same `createdMark(s)` that are returned by those
+   * It is called with the same `newMarks` that are returned by those
    * methods.
    *
    * __Note:__ This event handler is _not_ called for marks that are
    * created directly on `this.formatting` using its newMark or addMark
    * methods.
    */
-  onCreateMark: ((createdMark: TimestampMark) => void) | undefined = undefined;
+  onNewMarks: ((newMarks: TimestampMark[]) => void) | undefined = undefined;
 
   /**
    * Constructs a RichList.
@@ -161,13 +161,13 @@ export class RichList<T> {
    *
    * @returns [insertion Position,
    * [new bunch's BunchMeta](https://github.com/mweidner037/list-positions#newMeta) (or null),
-   * created formatting marks]
+   * new formatting marks]
    */
   insertWithFormat(
     index: number,
     format: Record<string, any>,
     value: T
-  ): [pos: Position, newMeta: BunchMeta | null, createdMarks: TimestampMark[]];
+  ): [pos: Position, newMeta: BunchMeta | null, newMarks: TimestampMark[]];
   /**
    * Inserts the given values at `index` using `this.list.insertAt`,
    * and applies new formatting marks
@@ -175,18 +175,14 @@ export class RichList<T> {
    *
    * @returns [starting insertion Position,
    * [new bunch's BunchMeta](https://github.com/mweidner037/list-positions#newMeta) (or null),
-   * created formatting marks]
+   * newformatting marks]
    * @throws If no values are provided.
    */
   insertWithFormat(
     index: number,
     format: Record<string, any>,
     ...values: T[]
-  ): [
-    startPos: Position,
-    newMeta: BunchMeta | null,
-    createdMarks: TimestampMark[]
-  ];
+  ): [startPos: Position, newMeta: BunchMeta | null, newMarks: TimestampMark[]];
   insertWithFormat(
     index: number,
     format: Record<string, any>,
@@ -194,7 +190,7 @@ export class RichList<T> {
   ): [
     startPos: Position,
     newMeta: BunchMeta | null,
-    createdMarks: TimestampMark[]
+    newMarks: TimestampMark[]
   ] {
     const [startPos, newMeta] = this.list.insertAt(index, ...values);
     // Inserted positions all get the same initial format because they are not
@@ -203,7 +199,7 @@ export class RichList<T> {
       this.formatting.getFormat(startPos),
       format
     );
-    const createdMarks: TimestampMark[] = [];
+    const newMarks: TimestampMark[] = [];
     for (const [key, value] of needsFormat) {
       const expand =
         this.expandRules === undefined ? "after" : this.expandRules(key, value);
@@ -215,15 +211,15 @@ export class RichList<T> {
       );
       const mark = this.formatting.newMark(start, end, key, value);
       this.formatting.addMark(mark);
-      this.onCreateMark?.(mark);
-      createdMarks.push(mark);
+      newMarks.push(mark);
     }
+    this.onNewMarks?.(newMarks);
 
     // We don't return the FormatChanges because they are not really needed
     // (you already know what the final format will be) and a bit confusing
     // (format props don't all match the final format; only make sense in order even
     // though marks commute). If you need them, you can add the marks yourself.
-    return [startPos, newMeta, createdMarks];
+    return [startPos, newMeta, newMarks];
   }
 
   /**
@@ -250,7 +246,7 @@ export class RichList<T> {
    * - "both": Combination of "before" and "after".
    * - "none": Does not expand.
    * This is the typical behavior for certain rich-text format keys, such as hyperlinks.
-   * @returns [created mark, non-redundant format changes]
+   * @returns [new mark, non-redundant format changes]
    */
   format(
     startIndex: number,
@@ -258,7 +254,7 @@ export class RichList<T> {
     key: string,
     value: any,
     expand?: "after" | "before" | "none" | "both"
-  ): [createdMark: TimestampMark, changes: FormatChange[]] {
+  ): [newMark: TimestampMark, changes: FormatChange[]] {
     if (expand === undefined) {
       expand =
         this.expandRules === undefined ? "after" : this.expandRules(key, value);
@@ -267,7 +263,7 @@ export class RichList<T> {
     const { start, end } = spanFromSlice(this.list, startIndex, endIndex);
     const mark = this.formatting.newMark(start, end, key, value);
     const changes = this.formatting.addMark(mark);
-    this.onCreateMark?.(mark);
+    this.onNewMarks?.([mark]);
     return [mark, changes];
   }
 

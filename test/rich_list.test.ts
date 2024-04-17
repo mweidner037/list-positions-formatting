@@ -110,17 +110,17 @@ describe("RichList", () => {
   describe("insertWithFormat", () => {
     test("plain", () => {
       const values = [..."one two three"];
-      const [, , createdMarks] = alice.insertWithFormat(0, {}, ...values);
+      const [, , newMarks] = alice.insertWithFormat(0, {}, ...values);
       assert.deepStrictEqual(alice.formattedValues(), [
         { startIndex: 0, endIndex: values.length, values, format: {} },
       ]);
-      assert.deepStrictEqual(createdMarks, []);
+      assert.deepStrictEqual(newMarks, []);
       checkMisc();
     });
 
     test("new format", () => {
       const values = [..."one two three"];
-      const [startPos, , createdMarks] = alice.insertWithFormat(
+      const [startPos, , newMarks] = alice.insertWithFormat(
         0,
         { bold: true },
         ...values
@@ -133,7 +133,7 @@ describe("RichList", () => {
           format: { bold: true },
         },
       ]);
-      assert.deepStrictEqual(createdMarks, [
+      assert.deepStrictEqual(newMarks, [
         {
           start: { pos: startPos, before: true },
           end: Anchors.MAX_ANCHOR,
@@ -151,7 +151,7 @@ describe("RichList", () => {
 
       // Append more values.
       // Since bold expands after, these will already be bold.
-      const [, , createdMarks] = alice.insertWithFormat(
+      const [, , newMarks] = alice.insertWithFormat(
         alice.list.length,
         { bold: true },
         ..."one two three"
@@ -164,7 +164,7 @@ describe("RichList", () => {
           format: { bold: true },
         },
       ]);
-      assert.deepStrictEqual(createdMarks, []);
+      assert.deepStrictEqual(newMarks, []);
       checkMisc();
     });
 
@@ -174,7 +174,7 @@ describe("RichList", () => {
       // Append more values.
       // Since url does *not* expand after, these need a new mark.
       const values2 = [..."one two three"];
-      const [startPos, , createdMarks] = alice.insertWithFormat(
+      const [startPos, , newMarks] = alice.insertWithFormat(
         alice.list.length,
         { url: "www1" },
         ...values2
@@ -188,7 +188,7 @@ describe("RichList", () => {
           format: { url: "www1" },
         },
       ]);
-      assert.deepStrictEqual(createdMarks, [
+      assert.deepStrictEqual(newMarks, [
         {
           start: { pos: startPos, before: true },
           end: { pos: poss.at(-1)!, before: false },
@@ -205,7 +205,7 @@ describe("RichList", () => {
       alice.insertWithFormat(0, { bold: true }, ..."one three");
 
       // Splice in "two " without the bold format.
-      const [, , createdMarks] = alice.insertWithFormat(4, {}, ..."two ");
+      const [, , newMarks] = alice.insertWithFormat(4, {}, ..."two ");
       assert.deepStrictEqual(alice.formattedValues(), [
         {
           startIndex: 0,
@@ -226,7 +226,7 @@ describe("RichList", () => {
           format: { bold: true },
         },
       ]);
-      assert.deepStrictEqual(createdMarks, [
+      assert.deepStrictEqual(newMarks, [
         {
           start: { pos: alice.list.positionAt(4), before: true },
           end: { pos: alice.list.positionAt(8), before: true },
@@ -243,7 +243,7 @@ describe("RichList", () => {
       alice.insertWithFormat(0, { bold: true, url: "www1" }, ..."one three");
 
       // Splice in "two " with a different format.
-      let [, , createdMarks] = alice.insertWithFormat(
+      let [, , newMarks] = alice.insertWithFormat(
         4,
         { italic: true, url: "www2" },
         ..."two "
@@ -269,9 +269,9 @@ describe("RichList", () => {
         },
       ]);
       // timestamps and array order are arbitrary, so throw them out before checking.
-      createdMarks = createdMarks.map((mark) => ({ ...mark, timestamp: -1 }));
-      createdMarks.sort((a, b) => (a.key > b.key ? 1 : -1));
-      assert.deepStrictEqual(createdMarks, [
+      newMarks = newMarks.map((mark) => ({ ...mark, timestamp: -1 }));
+      newMarks.sort((a, b) => (a.key > b.key ? 1 : -1));
+      assert.deepStrictEqual(newMarks, [
         {
           start: { pos: alice.list.positionAt(4), before: true },
           end: { pos: alice.list.positionAt(8), before: true },
@@ -306,7 +306,7 @@ describe("RichList", () => {
       alice.list.insertAt(0, ..."one two three");
 
       // Format "two " to bold, with default expansion (after).
-      const [createdMark, changes] = alice.format(4, 8, "bold", true);
+      const [newMark, changes] = alice.format(4, 8, "bold", true);
       assert.deepStrictEqual(alice.formattedValues(), [
         {
           startIndex: 0,
@@ -327,7 +327,7 @@ describe("RichList", () => {
           format: {},
         },
       ]);
-      assert.deepStrictEqual(createdMark, {
+      assert.deepStrictEqual(newMark, {
         start: { pos: alice.list.positionAt(4), before: true },
         end: { pos: alice.list.positionAt(8), before: true },
         key: "bold",
@@ -354,7 +354,7 @@ describe("RichList", () => {
       // Make "two " bold to start, then format the whole list to bold and
       // check changes.
       alice.format(4, 8, "bold", true);
-      const [createdMark, changes] = alice.format(
+      const [newMark, changes] = alice.format(
         0,
         alice.list.length,
         "bold",
@@ -368,7 +368,7 @@ describe("RichList", () => {
           format: { bold: true },
         },
       ]);
-      assert.deepStrictEqual(createdMark, {
+      assert.deepStrictEqual(newMark, {
         start: { pos: alice.list.positionAt(0), before: true },
         end: Anchors.MAX_ANCHOR,
         key: "bold",
@@ -402,13 +402,13 @@ describe("RichList", () => {
       bob.list.load(alice.list.save());
 
       const [startPos] = alice.list.insertAt(4, ..."two ");
-      const [createdMark] = bob.format(0, bob.list.length, "bold", true);
+      const [newMark] = bob.format(0, bob.list.length, "bold", true);
 
       // Sync changes and check results.
       for (const pos of expandPositions(startPos, 4)) {
         bob.list.set(pos, alice.list.get(pos)!);
       }
-      alice.formatting.addMark(createdMark);
+      alice.formatting.addMark(newMark);
 
       assert.deepStrictEqual(alice.formattedValues(), [
         {

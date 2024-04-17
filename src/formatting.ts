@@ -707,19 +707,25 @@ export class Formatting<M extends IMark> {
    * Specifically, returns an array of FormattedSlices in list order.
    * Each object describes a slice of the list with a single format.
    *
-   * `startIndex` and `endIndex` are as in
-   * [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+   * Optionally, you may specify a range of indices `[start, end)` instead of
+   * iterating the entire list.
+   *
+   * @throws If `start < 0`, `end > list.length`, or `start > end`.
    */
   formattedSlices(
     list: List<unknown> | Text | Outline | AbsList<unknown>,
-    startIndex?: number,
-    endIndex?: number
+    startIndex = 0,
+    endIndex = list.length
   ): FormattedSlice[] {
-    const posList = list instanceof AbsList ? list.list : list;
+    if (startIndex < 0 || endIndex > list.length || startIndex > endIndex) {
+      throw new Error(
+        `Invalid range: [${startIndex}, ${endIndex}) (length = ${list.length})`
+      );
+    }
+    // Note: start = end = this.length is okay.
+    if (startIndex === endIndex) return [];
 
-    const range = normalizeSliceRange(posList.length, startIndex, endIndex);
-    if (range === null) return [];
-    [startIndex, endIndex] = range;
+    const posList = list instanceof AbsList ? list.list : list;
 
     // As an optimization, restrict formattedSpans() to anchors that
     // could actually intersect with [start, end).
@@ -927,26 +933,4 @@ function equalsFormatChangeInternal(
 ): boolean {
   if (a === null || b === null) return a === b;
   return a.otherValue === b.otherValue && equalsRecord(a.format, b.format);
-}
-
-/**
- * Normalizes the range so that start < end and they are both in bounds
- * (possibly end=length), following Array.slice.
- * If the range is empty, returns null.
- */
-function normalizeSliceRange(
-  length: number,
-  start?: number,
-  end?: number
-): [start: number, end: number] | null {
-  if (start === undefined || start < -length) start = 0;
-  else if (start < 0) start += length;
-  else if (start >= length) return null;
-
-  if (end === undefined || end >= length) end = length;
-  else if (end < -length) end = 0;
-  else if (end < 0) end += length;
-
-  if (end <= start) return null;
-  return [start, end];
 }

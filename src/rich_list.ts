@@ -307,7 +307,10 @@ export class RichList<T> {
    * Each object describes a slice of values with a single format.
    * It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
    *
-   * Arguments are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+   * Optionally, you may specify a range of indices `[start, end)` instead of
+   * iterating the entire list.
+   *
+   * @throws If `start < 0`, `end > this.list.length`, or `start > end`.
    */
   formattedValues(start?: number, end?: number): FormattedValues<T>[] {
     const slices = this.formatting.formattedSlices(
@@ -336,7 +339,10 @@ export class RichList<T> {
    * Typically, you should instead use `formattedValues()`, which returns a
    * more efficient representation of the formatted values.
    *
-   * Arguments are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+   * Optionally, you may specify a range of indices `[start, end)` instead of
+   * iterating the entire list.
+   *
+   * @throws If `start < 0`, `end > this.list.length`, or `start > end`.
    */
   *entries(
     start?: number,

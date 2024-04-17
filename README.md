@@ -41,19 +41,13 @@ type Anchor = {
 };
 ```
 
-<!-- You can visualize a list's anchors as follows:
-
-TODO: image. -->
-
 ### Marks
 
 A _mark_ is an instruction to change the format of a range of values. For example, a mark may make a sentence bold, or add a hyperlink to a word.
 
-Each mark starts and ends at an anchor. It sets a single key-value pair for all Positions between those anchors.
+Each mark starts and ends at an anchor. It sets a single key-value pair for all Positions between those anchors. You can visualize a mark as follows:
 
-<!-- For example, this mark gives `"cat"` the format `{ bold: true }`:
-
-TODO: image -->
+![Anchors and an example mark](./images/bold_mark.png)
 
 Concretely, a mark implements the interface `IMark`:
 

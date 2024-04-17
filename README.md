@@ -97,7 +97,7 @@ Misc features:
 
 - `addMark` and `deleteMark` return changes to the current formatting.
 - `save()` and `load(savedState)` save and load the current set of marks, similar to list-positions's save and load methods.
-- `getActiveMarks(pos)` and `getAllMarks(pos)` give you more info about the marks covering a given Position.
+- `getActiveMarks(pos)` and `getMarks(pos)` give you more info about the marks covering a given Position.
 - There is no way to modify an existing mark, and you should avoid modifying IMark objects in-place. Instead, delete the current mark and add a modified version.
 
 **Warning:** Similar to list-positions's List class, you must [manage metadata](https://github.com/mweidner037/list-positions#managing-metadata) for a Formatting instance. Typically, you're already managing metadata for a List/Text/Outline/AbsList storing your actual values; it is then sufficient to share that list's `Order` with your Formatting instance, via the `order` constructor argument.

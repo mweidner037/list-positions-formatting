@@ -548,7 +548,7 @@ export class Formatting<M extends IMark> {
    *
    * @throws If pos is `MIN_POSITION` or `MAX_POSITION`.
    */
-  getAllMarks(pos: Position): Map<string, M[]> {
+  getMarks(pos: Position): Map<string, M[]> {
     // Defensive deep copy.
     const copy = new Map<string, M[]>();
     for (const [key, marks] of this.getFormatData(pos)) {

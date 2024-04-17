@@ -68,8 +68,6 @@ export type FormattedSpan = {
 
 /**
  * A slice of a list with a single format, returned by {@link Formatting.formattedSlices}.
- *
- * startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
  */
 export type FormattedSlice = {
   /**
@@ -763,7 +761,7 @@ export class Formatting<M extends IMark> {
   }
 
   /**
-   * Returns an iterator of our current marks, in {@link compareMarks} order (ascending).
+   * Iterates over our set of marks, in {@link compareMarks} order (ascending).
    *
    * This includes all marks that have been added and not deleted, regardless
    * of whether they currently win at any Position.

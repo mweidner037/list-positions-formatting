@@ -13,7 +13,7 @@ import { Anchor, Anchors } from "./anchor";
 
 /**
  * Returns a span `{ start: Anchor, end: Anchor }` that covers precisely
- * the given slice of list. The startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+ * the given slice of list.
  *
  * The span covers all positions from
  * `list.positionAt(startIndex)` to `list.positionAt(endIndex - 1)` inclusive,
@@ -73,7 +73,7 @@ export function spanFromSlice(
  * returning the slice that it currently covers.
  *
  * The slice is expressed in terms of its startIndex and endIndex
- * (endIndex excluded), like arguments to [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+ * (endIndex excluded).
  */
 export function sliceFromSpan(
   list: List<unknown> | Text | Outline | AbsList<unknown>,

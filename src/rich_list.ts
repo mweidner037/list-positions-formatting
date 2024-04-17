@@ -17,8 +17,6 @@ import {
 /**
  * A slice of values with a single format, returned by
  * {@link RichList.formattedValues}.
- *
- * startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
  */
 export type FormattedValues<T> = {
   /**
@@ -332,7 +330,7 @@ export class RichList<T> {
   }
 
   /**
-   * Returns an iterator of [position, value, format] tuples for every
+   * Iterators over [position, value, format] tuples for every
    * value in the list, in list order.
    *
    * Typically, you should instead use `formattedValues()`, which returns a

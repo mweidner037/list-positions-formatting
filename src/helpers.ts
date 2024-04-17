@@ -13,7 +13,7 @@ import { Anchor, Anchors } from "./anchor";
 
 /**
  * Returns a span `{ start: Anchor, end: Anchor }` that covers precisely
- * the given slice of list. The startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+ * the given slice of list.
  *
  * The span covers all positions from
  * `list.positionAt(startIndex)` to `list.positionAt(endIndex - 1)` inclusive,
@@ -33,7 +33,7 @@ import { Anchor, Anchors } from "./anchor";
  * - "none": Does not expand.
  * This is the typical behavior for certain rich-text format keys, such as hyperlinks.
  *
- * @throws If startIndex >= endIndex (the slice is empty).
+ * @throws If `startIndex >= endIndex` (the slice is empty).
  */
 export function spanFromSlice(
   list: List<unknown> | Text | Outline | AbsList<unknown>,
@@ -73,7 +73,7 @@ export function spanFromSlice(
  * returning the slice that it currently covers.
  *
  * The slice is expressed in terms of its startIndex and endIndex
- * (endIndex not included), like arguments to [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+ * (endIndex excluded).
  */
 export function sliceFromSpan(
   list: List<unknown> | Text | Outline | AbsList<unknown>,
@@ -87,7 +87,7 @@ export function sliceFromSpan(
 }
 
 /**
- * Returns a map of format changes needed to turn `format` into `current`.
+ * Returns the format changes needed to turn `format` into `current`.
  *
  * Usually, you will create a new mark for each key-value pair in the returned map.
  * Note that the map may contain null

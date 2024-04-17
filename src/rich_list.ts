@@ -16,9 +16,7 @@ import {
 
 /**
  * A slice of values with a single format, returned by
- * RichList.formattedValues.
- *
- * startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+ * {@link RichList.formattedValues}.
  */
 export type FormattedValues<T> = {
   /**
@@ -49,8 +47,8 @@ export type FormattedValues<T> = {
  * For advanced usage, you may read and write RichListSavedStates directly.
  *
  * The format is merely a `...SavedState` object for each of:
- * - `richList.order` (class Order from [list-positions](https://github.com/mweidner037/list-positions)).
- * - `richList.list` (class List from [list-positions](https://github.com/mweidner037/list-positions)).
+ * - `richList.order` (class Order from [list-positions](https://github.com/mweidner037/list-positions#readme)).
+ * - `richList.list` (class List from [list-positions](https://github.com/mweidner037/list-positions#readme)).
  * - `richList.formatting` (class TimestampFormatting).
  */
 export type RichListSavedState<T> = {
@@ -68,7 +66,7 @@ export type RichListSavedState<T> = {
  * combining indexed access, values, and formatting in a single object.
  *
  * For operations that only involve `this.list` or `this.formatting`, call methods
- * on them directly.
+ * on those properties directly.
  */
 export class RichList<T> {
   /**
@@ -91,7 +89,7 @@ export class RichList<T> {
    *
    * You may read and write this TimestampFormatting directly. RichList is
    * merely a wrapper that provides some convenience methods - in particular,
-   * `format` and `formattedValues`, which handle index-Anchor conversions for you.
+   * `format` and `formattedValues`, which handle index/Anchor conversions for you.
    */
   readonly formatting: TimestampFormatting;
 
@@ -124,20 +122,21 @@ export class RichList<T> {
    * a `new List(options?.order)` is used. Exclusive with `options.order`.
    * @param options.replicaID The replica ID for `this.formatting`
    * (_not_ `this.order`). All of our created marks will use it as their
-   * `creatorID`. Default: list-positions's `BunchIDs.newReplicaID()`.
+   * `creatorID`. Default: A random alphanumeric string from the
+   * [maybe-random-string](https://github.com/mweidner037/maybe-random-string#readme) package.
    * @param options.expandRules The value of `expand` to use when one is
    * not provided to `this.format` and for all marks created by `this.insertWithFormat`.
    * Expressed as a function that inputs the mark's key and value
    * and outputs the `expand` to use. Default: Always returns "after".
    */
   constructor(options?: {
+    order?: Order;
+    list?: List<T>;
+    replicaID?: string;
     expandRules?: (
       key: string,
       value: any
     ) => "after" | "before" | "none" | "both";
-    order?: Order;
-    list?: List<T>;
-    replicaID?: string;
   }) {
     if (options?.list !== undefined) {
       if (options.order !== undefined) {
@@ -161,26 +160,22 @@ export class RichList<T> {
    * as needed so that the value has the exact given format.
    *
    * @returns [insertion Position,
-   * [created bunch's](https://github.com/mweidner037/list-positions#createdBunch)
-   * BunchMeta (or null), created formatting marks]
+   * [new bunch's BunchMeta](https://github.com/mweidner037/list-positions#newMeta) (or null),
+   * created formatting marks]
    */
   insertWithFormat(
     index: number,
     format: Record<string, any>,
     value: T
-  ): [
-    pos: Position,
-    createdBunch: BunchMeta | null,
-    createdMarks: TimestampMark[]
-  ];
+  ): [pos: Position, newMeta: BunchMeta | null, createdMarks: TimestampMark[]];
   /**
    * Inserts the given values at `index` using `this.list.insertAt`,
    * and applies new formatting marks
    * as needed so that the values have the exact given format.
    *
-   * @returns [starting Position,
-   * [created bunch's](https://github.com/mweidner037/list-positions#createdBunch)
-   * BunchMeta (or null), created formatting marks]
+   * @returns [starting insertion Position,
+   * [new bunch's BunchMeta](https://github.com/mweidner037/list-positions#newMeta) (or null),
+   * created formatting marks]
    * @throws If no values are provided.
    */
   insertWithFormat(
@@ -189,7 +184,7 @@ export class RichList<T> {
     ...values: T[]
   ): [
     startPos: Position,
-    createdBunch: BunchMeta | null,
+    newMeta: BunchMeta | null,
     createdMarks: TimestampMark[]
   ];
   insertWithFormat(
@@ -198,10 +193,10 @@ export class RichList<T> {
     ...values: T[]
   ): [
     startPos: Position,
-    createdBunch: BunchMeta | null,
+    newMeta: BunchMeta | null,
     createdMarks: TimestampMark[]
   ] {
-    const [startPos, createdBunch] = this.list.insertAt(index, ...values);
+    const [startPos, newMeta] = this.list.insertAt(index, ...values);
     // Inserted positions all get the same initial format because they are not
     // interleaved with any existing positios.
     const needsFormat = diffFormats(
@@ -228,7 +223,7 @@ export class RichList<T> {
     // (you already know what the final format will be) and a bit confusing
     // (format props don't all match the final format; only make sense in order even
     // though marks commute). If you need them, you can add the marks yourself.
-    return [startPos, createdBunch, createdMarks];
+    return [startPos, newMeta, createdMarks];
   }
 
   /**
@@ -244,7 +239,7 @@ export class RichList<T> {
    * the slice's endpoints, depending on the value of `expand`.
    *
    * @param expand Whether the mark covers not-currently-present positions at
-   * the slice's endpoints. If not provided, the output of the constructors
+   * the slice's endpoints. If not provided, the output of the constructor's
    * `options.expandRules` function is used, which defaults to "after".
    * - "after": The mark expands to cover positions at the end, i.e.,
    * between `this.list.positionAt(endIndex - 1)` and `this.list.positionAt(endIndex)`.
@@ -298,7 +293,7 @@ export class RichList<T> {
    * Iterates over an efficient representation of this RichList's values and their current
    * formatting.
    *
-   * Same as `this.formattedValues()`.
+   * Same as {@link formattedValues}.
    */
   [Symbol.iterator](): IterableIterator<FormattedValues<T>> {
     return this.formattedValues()[Symbol.iterator]();
@@ -308,8 +303,9 @@ export class RichList<T> {
    * Returns an efficient representation of this RichList's values and their current
    * formatting.
    *
-   * Specifically, returns an array of FormattedValues objects in list order.
+   * Specifically, this method returns an array of FormattedValues objects in list order.
    * Each object describes a slice of values with a single format.
+   * It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
    *
    * Arguments are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
    */
@@ -334,7 +330,7 @@ export class RichList<T> {
   }
 
   /**
-   * Returns an iterator of [position, value, format] tuples for every
+   * Iterators over [position, value, format] tuples for every
    * value in the list, in list order.
    *
    * Typically, you should instead use `formattedValues()`, which returns a

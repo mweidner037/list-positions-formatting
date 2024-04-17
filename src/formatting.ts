@@ -127,14 +127,15 @@ export type FormatChange = {
 /**
  * A JSON-serializable saved state for a `Formatting<M>`.
  *
- * See Formatting.save and Formatting.load.
+ * See {@link Formatting.save} and {@link Formatting.load}.
  *
  * ### Format
  *
  * For advanced usage, you may read and write FormattingSavedStates directly.
  *
- * Its format is the array of all marks _in compareMarks order (ascending)_.
- * This is merely `[...formatting.marks()]`.
+ * Its format is the array of all marks.
+ * Formatting.save always returns these in compareMarks order (ascending),
+ * although Formatting.load accepts any order.
  */
 export type FormattingSavedState<M extends IMark> = M[];
 

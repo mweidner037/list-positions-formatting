@@ -1,5 +1,12 @@
 import { assert } from "chai";
-import { List, Order, Position, expandPositions } from "list-positions";
+import {
+  List,
+  MAX_POSITION,
+  MIN_POSITION,
+  Order,
+  Position,
+  expandPositions,
+} from "list-positions";
 import { maybeRandomString } from "maybe-random-string";
 import { describe, test } from "mocha";
 import seedrandom from "seedrandom";
@@ -305,27 +312,60 @@ describe("helpers", () => {
     });
   });
 
-  // Anchors.compare tests.
-  describe("compare", () => {
-    test("all pairs", () => {
+  // Anchors.* tests.
+  describe("Anchors utilities", () => {
+    describe("compare", () => {
+      test("all pairs", () => {
+        const list = new List(
+          new Order({
+            replicaID: maybeRandomString({ prng }),
+          })
+        );
+        list.insertAt(0, ..."0123456789");
+
+        const allAnchors: Anchor[] = [Anchors.MIN_ANCHOR];
+        for (const pos of list.positions()) {
+          allAnchors.push({ pos, before: true }, { pos, before: false });
+        }
+        allAnchors.push(Anchors.MAX_ANCHOR);
+
+        for (let i = 0; i < allAnchors.length; i++) {
+          for (let j = 0; j < allAnchors.length; j++) {
+            const cmp = Anchors.compare(
+              list.order,
+              allAnchors[i],
+              allAnchors[j]
+            );
+            assert.strictEqual(Math.sign(cmp), Math.sign(i - j));
+          }
+        }
+      });
+    });
+
+    test("validate", () => {
+      assert.throws(() =>
+        Anchors.validate({ pos: MIN_POSITION, before: true })
+      );
+      assert.throws(() =>
+        Anchors.validate({ pos: MAX_POSITION, before: false })
+      );
+
+      assert.doesNotThrow(() =>
+        Anchors.validate({ pos: MIN_POSITION, before: false })
+      );
+      assert.doesNotThrow(() =>
+        Anchors.validate({ pos: MAX_POSITION, before: true })
+      );
+
       const list = new List(
         new Order({
           replicaID: maybeRandomString({ prng }),
         })
       );
       list.insertAt(0, ..."0123456789");
-
-      const allAnchors: Anchor[] = [Anchors.MIN_ANCHOR];
       for (const pos of list.positions()) {
-        allAnchors.push({ pos, before: true }, { pos, before: false });
-      }
-      allAnchors.push(Anchors.MAX_ANCHOR);
-
-      for (let i = 0; i < allAnchors.length; i++) {
-        for (let j = 0; j < allAnchors.length; j++) {
-          const cmp = Anchors.compare(list.order, allAnchors[i], allAnchors[j]);
-          assert.strictEqual(Math.sign(cmp), Math.sign(i - j));
-        }
+        assert.doesNotThrow(() => Anchors.validate({ pos, before: true }));
+        assert.doesNotThrow(() => Anchors.validate({ pos, before: false }));
       }
     });
   });

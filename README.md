@@ -93,12 +93,13 @@ Class `Formatting<M extends IMark>` implements the above marks-to-formatting pro
 
 Class Formatting does not specify the sort order on marks. Instead, you choose the sort order, by extending the `IMark` interface with extra fields (type parameter `M`) and supplying a `compareMarks` function that uses those fields. Alternatively, you can use the [TimestampFormatting](#class-timestampformatting) class, which chooses a reasonable default sort order.
 
-Misc features:
+Misc:
 
 - `addMark` and `deleteMark` return changes to the current formatting.
 - `save()` and `load(savedState)` save and load the current set of marks, similar to list-positions's save and load methods.
 - `getActiveMarks(pos)` and `getMarks(pos)` give you more info about the marks covering a given Position.
-- There is no way to modify an existing mark, and you should avoid modifying IMark objects in-place. Instead, delete the current mark and add a modified version.
+- There is no way to modify an existing mark, and you should not mutate IMark objects in-place. Instead, delete the current mark and add a modified version.
+- For technical reasons, you cannot use Formatting with a list that contains `MIN_POSITION` or `MAX_POSITION`. Calling `getFormat` on such a Position will throw an error, as will using the "out-of-bounds" Anchors `{ pos: MIN_POSITION, before: true }` or `{ pos: MAX_POSITION, before: false }`.
 
 **Warning:** Similar to list-positions's List class, you must [manage metadata](https://github.com/mweidner037/list-positions#managing-metadata) for a Formatting instance. Typically, you're already managing metadata for a List/Text/Outline/AbsList storing your actual values; it is then sufficient to share that list's `Order` with your Formatting instance, via the `order` constructor argument.
 
@@ -146,7 +147,7 @@ If you don't want to use RichText (e.g., because you are using an List or Outlin
 
 - `diffFormats(current, target)`: Returns changes (including null for deletions) to turn the `current` format into `target`. Core logic behind `RichText.insertWithFormat`.
 - `sliceFromSpan`, `spanFromSlice`: Convert between list-independent spans `{ start: Anchor, end: Anchor }` and list-specific slices `{ startIndex: number, endIndex: number }`.
-- `Anchors` static object: min and max Anchors, `equals` and `compare` functions for Anchors, and `indexOfAnchor`.
+- `Anchors` static object: `MIN_ANCHOR` and `MAX_ANCHOR`; `equals`, `compare`, and `validate` functions for Anchors; `indexOfAnchor`.
 
 ## Performance
 

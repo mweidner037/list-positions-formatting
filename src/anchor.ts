@@ -8,6 +8,7 @@ import {
   Outline,
   Position,
   positionEquals,
+  BunchIDs,
 } from "list-positions";
 
 /**
@@ -72,6 +73,21 @@ export const Anchors = {
   },
 
   /**
+   * Throws an error if anchor is invalid.
+   *
+   * The only invalid anchors are `{ pos: MIN_POSITION, before: true }`
+   * and `{ pos: MAX_POSITION, before: false }`: They are outside the range
+   * `[MIN_ANCHOR, MAX_ANCHOR]`, hence will not work with Formatting.
+   */
+  validate(anchor: Anchor): void {
+    if (anchor.pos.bunchID === BunchIDs.ROOT) {
+      if ((anchor.pos.innerIndex === 0) === anchor.before) {
+        throw new Error(`Invalid anchor: ${JSON.stringify(anchor)}`);
+      }
+    }
+  },
+
+  /**
    * Returns the next index to the right of anchor in the given list,
    * or `list.length` if anchor is after all present positions.
    *
@@ -94,6 +110,8 @@ export const Anchors = {
     list: List<unknown> | Text | Outline | AbsList<unknown>,
     anchor: Anchor
   ): number {
+    Anchors.validate(anchor);
+
     const posList = list instanceof AbsList ? list.list : list;
     return anchor.before
       ? posList.indexOfPosition(anchor.pos, "right")

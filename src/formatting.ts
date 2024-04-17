@@ -247,6 +247,8 @@ export class Formatting<M extends IMark> {
       return [];
     }
 
+    Anchors.validate(mark.start);
+    Anchors.validate(mark.end);
     if (Anchors.compare(this.order, mark.start, mark.end) >= 0) {
       throw new Error(
         `mark has start >= end: ${JSON.stringify(mark.start)}, ${JSON.stringify(
@@ -608,6 +610,8 @@ export class Formatting<M extends IMark> {
     end: Anchor = Anchors.MAX_ANCHOR
   ): FormattedSpan[] {
     // Special cases.
+    Anchors.validate(start);
+    Anchors.validate(end);
     const cmp = Anchors.compare(this.order, start, end);
     if (cmp === 0) return [];
     if (cmp > 0) {

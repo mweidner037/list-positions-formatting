@@ -1,12 +1,17 @@
 import { Order } from "list-positions";
 import { maybeRandomString } from "maybe-random-string";
 import { Anchor } from "./anchor";
-import { FormatChange, Formatting, FormattingSavedState } from "./formatting";
+import {
+  FormatChange,
+  Formatting,
+  FormattingSavedState,
+  IMark,
+} from "./formatting";
 
 /**
- * Mark type for TimestampFormatting.
+ * {@link IMark} subtype used by TimestampFormatting.
  *
- * To create a TimestampMark, use `TimestampFormatting.newMark`.
+ * To create a TimestampMark, use {@link TimestampFormatting.newMark}.
  *
  * TimestampMark implements IMark and uses
  * [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp)
@@ -19,26 +24,7 @@ import { FormatChange, Formatting, FormattingSavedState } from "./formatting";
  * previously created or added by its TimestampFormatting.
  * Thus a new mark "wins" over all marks in the current state, as expected.
  */
-export type TimestampMark = {
-  /**
-   * The mark's starting anchor.
-   */
-  readonly start: Anchor;
-  /**
-   * The mark's ending anchor.
-   */
-  readonly end: Anchor;
-  /**
-   * The mark's format key.
-   */
-  readonly key: string;
-  /**
-   * The mark's format value.
-   *
-   * A null value deletes key, causing it to no longer appear in
-   * format objects. Any other value appears as-is in format objects.
-   */
-  readonly value: any;
+export type TimestampMark = IMark & {
   /**
    * The replicaID of the TimestampFormatting instance that created this mark
    * (via `TimestampFormatting.newMark`).
@@ -68,14 +54,15 @@ function compareTimestampMarks(a: TimestampMark, b: TimestampMark): number {
 /**
  * A JSON-serializable saved state for a `TimestampFormatting`.
  *
- * See TimestampFormatting.save and TimestampFormatting.load.
+ * See {@link TimestampFormatting.save} and {@link TimestampFormatting.load}.
  *
  * ### Format
  *
  * For advanced usage, you may read and write TimestampFormattingSavedStates directly.
  *
- * Its format is the array of all marks _in compareMarks order (ascending)_.
- * This is merely `[...formatting.marks()]`.
+ * Its format is the array of all marks.
+ * They are allowed to be in any order, although TimestampFormatting.save always returns them
+ * in compareMarks order (ascending).
  */
 export type TimestampFormattingSavedState = FormattingSavedState<TimestampMark>;
 
@@ -84,9 +71,9 @@ export type TimestampFormattingSavedState = FormattingSavedState<TimestampMark>;
  *
  * This class is the same as [Formatting](https://github.com/mweidner037/list-formatting#class-formatting)
  * except that it chooses a reasonable
- * default sort order, on marks of type TimestampMark.
+ * default sort order, on marks of type {@link TimestampMark}.
  *
- * Mutate the set using `addMark(mark)` and `deleteMark(mark)`.
+ * Mutate the set of marks using {@link addMark} and {@link deleteMark}.
  * Other methods let you query the formatting resulting from the current set of marks.
  *
  * The sort order uses [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp),

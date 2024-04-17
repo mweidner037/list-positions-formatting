@@ -37,15 +37,14 @@ export interface IMark {
   /**
    * The mark's format value.
    *
-   * A null value deletes key, causing it to no longer appear in
+   * A null value deletes `this.key`, causing it to no longer appear in
    * format objects. Any other value appears as-is in format objects.
    */
   value: any;
 }
 
 /**
- * A span with a single format, returned by
- * RichList.formattedSpans.
+ * A span with a single format, returned by {@link Formatting.formattedSpans}
  *
  * The span is independent of any particular list.
  */
@@ -68,8 +67,7 @@ export type FormattedSpan = {
 };
 
 /**
- * A slice of a list with a single format, returned by
- * RichList.formattedSlices.
+ * A slice of a list with a single format, returned by {@link Formatting.formattedSlices}.
  *
  * startIndex and endIndex are as in [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
  */
@@ -86,14 +84,14 @@ export type FormattedSlice = {
    * The common format for all of the slice's values.
    *
    * Note: This format is not necessarily accurate for Positions that are not
-   * currently present in the target list, even if they lie between
-   * slice's endpoints' Positions.
+   * currently present in the target list.
    */
   readonly format: Record<string, any>;
 };
 
 /**
- * A change to a span's format, returned by Formatting.addMark and Formatting.deleteMark.
+ * A change to a span's format, returned by {@link Formatting.addMark} and
+ * {@link Formatting.deleteMark}.
  */
 export type FormatChange = {
   /**
@@ -134,8 +132,8 @@ export type FormatChange = {
  * For advanced usage, you may read and write FormattingSavedStates directly.
  *
  * Its format is the array of all marks.
- * Formatting.save always returns these in compareMarks order (ascending),
- * although Formatting.load accepts any order.
+ * They are allowed to be in any order, although Formatting.save always returns them
+ * in compareMarks order (ascending).
  */
 export type FormattingSavedState<M extends IMark> = M[];
 
@@ -144,7 +142,7 @@ export type FormattingSavedState<M extends IMark> = M[];
  *
  * See [Formatting](https://github.com/mweidner037/list-formatting#class-formatting) in the readme.
  *
- * Mutate the set using `addMark(mark)` and `deleteMark(mark)`.
+ * Mutate the set of marks using {@link addMark} and {@link deleteMark}.
  * Other methods let you query the formatting resulting from the current set of marks.
  *
  * See also: TimestampFormatting, a subclass that chooses a reasonable default
@@ -158,7 +156,7 @@ export class Formatting<M extends IMark> {
    * The compareMarks order determines which mark "wins" (i.e., sets its key's current value)
    * when multiple marks cover the same Position.
    *
-   * Its implied equality semantics (a equals b if and only if `compareMarks(a, b) === 0`)
+   * Its implied equality semantics (`a` equals `b` if and only if `compareMarks(a, b) === 0`)
    * is also used to check whether an added
    * mark is redundant in `addMark`, and to find the mark to delete
    * in `deleteMark`.
@@ -182,7 +180,7 @@ export class Formatting<M extends IMark> {
    * @param order The Order to use for `this.order`.
    * Typically, it should be shared with the list(s) that this
    * is formatting.
-   * @param compareMarks The function to use for `this.compareMarks`.
+   * @param compareMarks The function to use for {@link compareMarks}.
    */
   constructor(readonly order: Order, compareMarks: (a: M, b: M) => number) {
     this.compareMarks = compareMarks;
@@ -239,7 +237,7 @@ export class Formatting<M extends IMark> {
    * entire span, if the given mark loses to existing marks.
    *
    * If the mark is already present, nothing happens. Here equality is tested
-   * using compareMarks, *not* by-reference equality.
+   * using {@link compareMarks}, **not** `===` equality.
    */
   addMark(mark: M): FormatChange[] {
     const index = this.locateMark(this.orderedMarks, mark);
@@ -404,7 +402,7 @@ export class Formatting<M extends IMark> {
    * entire span, if the given mark was losing to other marks.
    *
    * If the mark is already not present, nothing happens. Here equality is tested
-   * using compareMarks, *not* by-reference equality.
+   * using {@link compareMarks}, **not** `===` equality.
    */
   deleteMark(mark: M): FormatChange[] {
     const index = this.locateMark(this.orderedMarks, mark);
@@ -507,7 +505,7 @@ export class Formatting<M extends IMark> {
   }
 
   /**
-   * Deletes every mark, making our start empty.
+   * Deletes every mark, making our set of marks empty.
    *
    * `this.order` is unaffected (retains all metadata).
    */
@@ -521,7 +519,7 @@ export class Formatting<M extends IMark> {
   /**
    * Returns the current format at pos.
    *
-   * @throws If pos is min or max Position.
+   * @throws If pos is `MIN_POSITION` or `MAX_POSITION`.
    */
   getFormat(pos: Position): Record<string, any> {
     return dataToRecord(this.getFormatData(pos));
@@ -531,10 +529,10 @@ export class Formatting<M extends IMark> {
    * Returns the current active (winning) marks at pos, as a Map from format keys
    * to marks.
    *
-   * Note that an active mark may have value null, in which case its key does
-   * not appear in `getFormat(pos)`.
+   * Note that an active mark may have value null, in which case it appears in the Map
+   * but its key does not appear in `getFormat(pos)`.
    *
-   * @throws If pos is min or max Position.
+   * @throws If pos is `MIN_POSITION` or `MAX_POSITION`.
    */
   getActiveMarks(pos: Position): Map<string, M> {
     const active = new Map<string, M>();
@@ -545,13 +543,12 @@ export class Formatting<M extends IMark> {
   }
 
   /**
-   * Returns all marks at pos, as a Map from format keys
-   * to marks using that key.
+   * Returns all marks at pos regardless of whether they are currently active (winning),
+   * as a Map from format keys to marks.
    *
-   * Each array of marks
-   * is nonempty and in compareMarks order.
+   * Each array of marks is nonempty and in {@link compareMarks} order.
    *
-   * @throws If pos is min or max Position.
+   * @throws If pos is `MIN_POSITION` or `MAX_POSITION`.
    */
   getAllMarks(pos: Position): Map<string, M[]> {
     // Defensive deep copy.
@@ -566,7 +563,7 @@ export class Formatting<M extends IMark> {
    * Returns the format data that is active at pos (not necessarily
    * keyed by pos).
    *
-   * @throws If pos is min or max Position.
+   * @throws If pos is `MIN_POSITION` or `MAX_POSITION`.
    */
   private getFormatData(pos: Position): Map<string, M[]> {
     if (pos.bunchID === BunchIDs.ROOT) {
@@ -587,7 +584,7 @@ export class Formatting<M extends IMark> {
    * Iterates over an efficient representation of our current Formatting state,
    * independent of a specific list.
    *
-   * Same as `this.formattedSpans()`.
+   * Same as {@link formattedSpans}.
    */
   [Symbol.iterator](): IterableIterator<FormattedSpan> {
     return this.formattedSpans()[Symbol.iterator]();
@@ -597,14 +594,16 @@ export class Formatting<M extends IMark> {
    * Returns an efficient representation of our current Formatting state,
    * independent of a specific list.
    *
-   * Specifically, returns an array of FormattedSpans in list order.
+   * Specifically, this method returns an array of FormattedSpans in list order.
    * Each object describes a span with a single format.
    * The spans start and end at the given anchors, with each `span.start`
    * equal to the previous `span.end`.
    *
-   * @param start The first span's `start`. Default: `Anchors.MIN_ANCHOR`.
-   * @param end The last span's `end`. Default: `Anchors.MAX_ANCHOR`.
-   * @throws If start > end.
+   * Use the `start` and `end` arguments to restrict to a specific part of the list order.
+   *
+   * @param start The first span's `start`. Default: {@link Anchors.MIN_ANCHOR}.
+   * @param end The last span's `end`. Default: {@link Anchors.MAX_ANCHOR}.
+   * @throws If `start > end`.
    */
   formattedSpans(
     start: Anchor = Anchors.MIN_ANCHOR,
@@ -764,7 +763,7 @@ export class Formatting<M extends IMark> {
   }
 
   /**
-   * Returns an iterator of our current marks, in compareMarks order (ascending).
+   * Returns an iterator of our current marks, in {@link compareMarks} order (ascending).
    *
    * This includes all marks that have been added and not deleted, regardless
    * of whether they currently win at any Position.
@@ -788,7 +787,7 @@ export class Formatting<M extends IMark> {
 
   /**
    * Loads a saved state returned by another Formatting's `save()` method.
-   * The other Formatting must have used the same compareMarks function as us.
+   * The other Formatting must have used the same {@link compareMarks} function as us.
    *
    * Loading sets our marks to match the saved Formatting's,
    * *overwriting* our current state.

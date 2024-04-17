@@ -21,8 +21,7 @@ import {
  * Using anchors instead of positions lets the mark choose whether it "expands"
  * to include new positions before/after its original range.
  *
- * See also: [Utilities](https://github.com/mweidner037/list-formatting#utilities)
- * for working with Anchors.
+ * @see {@link Anchors} Utilities for working with Anchors.
  */
 export type Anchor = {
   /**
@@ -36,6 +35,9 @@ export type Anchor = {
   readonly before: boolean;
 };
 
+/**
+ * Utilities for working with Anchors.
+ */
 export const Anchors = {
   /**
    * The minimum Anchor, which is after Order.MIN_POSITION.
@@ -81,12 +83,12 @@ export const Anchors = {
    *   endIndex: Anchors.indexOfAnchor(list, end)
    * }
    * ```
-   * (endIndex not included).
+   * (endIndex excluded).
    *
    * See also:
    * - sliceFromSpan: Does the above start/end to slice conversion.
    * - spanFromSlice: Partial inverse for sliceFromSpan, and the closest thing
-   * to an inverse for this function.
+   * to an inverse for indexOfAnchor.
    */
   indexOfAnchor(
     list: List<unknown> | Text | Outline | AbsList<unknown>,

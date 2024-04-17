@@ -236,6 +236,8 @@ export class Formatting<M extends IMark> {
    *
    * If the mark is already present, nothing happens. Here equality is tested
    * using {@link compareMarks}, **not** `===` equality.
+   * 
+   * @throws If the mark uses an invalid anchor (see {@link Anchors.validate}) or `start >= end`.
    */
   addMark(mark: M): FormatChange[] {
     const index = this.locateMark(this.orderedMarks, mark);

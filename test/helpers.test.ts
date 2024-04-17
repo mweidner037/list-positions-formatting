@@ -62,19 +62,45 @@ describe("helpers", () => {
     });
 
     test("errors", () => {
+      // Out-of-bounds
       assert.throws(() => {
-        spanFromSlice(list, 0, 0);
+        spanFromSlice(list, -1, 1);
       });
       assert.throws(() => {
-        spanFromSlice(list, 1, 1);
+        spanFromSlice(list, 1, list.length + 1);
       });
       assert.throws(() => {
+        spanFromSlice(list, -1, -1);
+      });
+      assert.throws(() => {
+        spanFromSlice(list, list.length + 1, list.length + 1);
+      });
+
+      assert.doesNotThrow(() => {
+        spanFromSlice(list, 0, 1);
+      });
+      assert.doesNotThrow(() => {
+        spanFromSlice(list, 1, list.length);
+      });
+
+      // Trivial slices are okay.
+      for (let i = 0; i <= list.length; i++) {
+        assert.doesNotThrow(() => {
+          spanFromSlice(list, i, i);
+        });
+      }
+
+      // Reversed slices are not checked.
+      assert.doesNotThrow(() => {
+        spanFromSlice(list, 2, 1);
+      });
+      assert.doesNotThrow(() => {
         spanFromSlice(list, 1, 0);
       });
-      assert.throws(() => {
-        spanFromSlice(list, list.length, list.length);
+      assert.doesNotThrow(() => {
+        spanFromSlice(list, list.length, list.length - 1);
       });
-      assert.throws(() => {
+      assert.doesNotThrow(() => {
         spanFromSlice(list, list.length, 0);
       });
     });

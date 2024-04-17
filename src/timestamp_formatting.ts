@@ -1,6 +1,6 @@
 import { Order } from "list-positions";
 import { maybeRandomString } from "maybe-random-string";
-import { Anchor } from "./anchor";
+import { Anchor, Anchors } from "./anchor";
 import {
   FormatChange,
   Formatting,
@@ -114,8 +114,18 @@ export class TimestampFormatting extends Formatting<TimestampMark> {
    *
    * The mark's timestamp is greater than that of all previously created or added marks,
    * and it uses `this.replicaID` as its creatorID.
+   *
+   * @throws If the mark uses an invalid anchor (see {@link Anchors.validate}) or `start >= end`.
    */
   newMark(start: Anchor, end: Anchor, key: string, value: any): TimestampMark {
+    Anchors.validate(start);
+    Anchors.validate(end);
+    if (Anchors.compare(this.order, start, end) >= 0) {
+      throw new Error(
+        `start >= end: ${JSON.stringify(start)}, ${JSON.stringify(end)}`
+      );
+    }
+
     return {
       start,
       end,

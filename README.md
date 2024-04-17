@@ -147,7 +147,7 @@ If you don't want to use RichText (e.g., because you are using an List or Outlin
 
 - `diffFormats(current, target)`: Returns changes (including null for deletions) to turn the `current` format into `target`. Core logic behind `RichText.insertWithFormat`.
 - `sliceFromSpan`, `spanFromSlice`: Convert between list-independent spans `{ start: Anchor, end: Anchor }` and list-specific slices `{ startIndex: number, endIndex: number }`.
-- `Anchors` static object: `MIN_ANCHOR` and `MAX_ANCHOR`; `equals`, `compare`, and `validate` functions for Anchors; `indexOfAnchor`.
+- `Anchors` static object: `MIN_ANCHOR` and `MAX_ANCHOR`; `equals`, `compare`, and `validate` functions for Anchors; `indexOfAnchor` and `anchorAt`.
 
 ## Performance
 

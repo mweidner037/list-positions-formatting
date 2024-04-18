@@ -125,7 +125,7 @@ export type FormatChange = {
  *
  * See {@link Formatting.save} and {@link Formatting.load}.
  *
- * ### Format
+ * ## Format
  *
  * For advanced usage, you may read and write FormattingSavedStates directly.
  *
@@ -236,6 +236,8 @@ export class Formatting<M extends IMark> {
    *
    * If the mark is already present, nothing happens. Here equality is tested
    * using {@link compareMarks}, **not** `===` equality.
+   *
+   * @throws If the mark uses an invalid anchor (see {@link Anchors.validate}) or `start >= end`.
    */
   addMark(mark: M): FormatChange[] {
     const index = this.locateMark(this.orderedMarks, mark);
@@ -247,6 +249,8 @@ export class Formatting<M extends IMark> {
       return [];
     }
 
+    Anchors.validate(mark.start);
+    Anchors.validate(mark.end);
     if (Anchors.compare(this.order, mark.start, mark.end) >= 0) {
       throw new Error(
         `mark has start >= end: ${JSON.stringify(mark.start)}, ${JSON.stringify(
@@ -548,7 +552,7 @@ export class Formatting<M extends IMark> {
    *
    * @throws If pos is `MIN_POSITION` or `MAX_POSITION`.
    */
-  getAllMarks(pos: Position): Map<string, M[]> {
+  getMarks(pos: Position): Map<string, M[]> {
     // Defensive deep copy.
     const copy = new Map<string, M[]>();
     for (const [key, marks] of this.getFormatData(pos)) {
@@ -608,6 +612,8 @@ export class Formatting<M extends IMark> {
     end: Anchor = Anchors.MAX_ANCHOR
   ): FormattedSpan[] {
     // Special cases.
+    Anchors.validate(start);
+    Anchors.validate(end);
     const cmp = Anchors.compare(this.order, start, end);
     if (cmp === 0) return [];
     if (cmp > 0) {
@@ -707,19 +713,25 @@ export class Formatting<M extends IMark> {
    * Specifically, returns an array of FormattedSlices in list order.
    * Each object describes a slice of the list with a single format.
    *
-   * `startIndex` and `endIndex` are as in
-   * [Array.slice](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice).
+   * Optionally, you may specify a range of indices `[startIndex, endIndex)` instead of
+   * iterating the entire list.
+   *
+   * @throws If `startIndex < 0`, `endIndex > list.length`, or `startIndex > endIndex`.
    */
   formattedSlices(
     list: List<unknown> | Text | Outline | AbsList<unknown>,
-    startIndex?: number,
-    endIndex?: number
+    startIndex = 0,
+    endIndex = list.length
   ): FormattedSlice[] {
-    const posList = list instanceof AbsList ? list.list : list;
+    if (startIndex < 0 || endIndex > list.length || startIndex > endIndex) {
+      throw new Error(
+        `Invalid range: [${startIndex}, ${endIndex}) (length = ${list.length})`
+      );
+    }
+    // Note: start = end = this.length is okay.
+    if (startIndex === endIndex) return [];
 
-    const range = normalizeSliceRange(posList.length, startIndex, endIndex);
-    if (range === null) return [];
-    [startIndex, endIndex] = range;
+    const posList = "list" in list ? list.list : list;
 
     // As an optimization, restrict formattedSpans() to anchors that
     // could actually intersect with [start, end).
@@ -927,26 +939,4 @@ function equalsFormatChangeInternal(
 ): boolean {
   if (a === null || b === null) return a === b;
   return a.otherValue === b.otherValue && equalsRecord(a.format, b.format);
-}
-
-/**
- * Normalizes the range so that start < end and they are both in bounds
- * (possibly end=length), following Array.slice.
- * If the range is empty, returns null.
- */
-function normalizeSliceRange(
-  length: number,
-  start?: number,
-  end?: number
-): [start: number, end: number] | null {
-  if (start === undefined || start < -length) start = 0;
-  else if (start < 0) start += length;
-  else if (start >= length) return null;
-
-  if (end === undefined || end >= length) end = length;
-  else if (end < -length) end = 0;
-  else if (end < 0) end += length;
-
-  if (end <= start) return null;
-  return [start, end];
 }

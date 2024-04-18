@@ -1,15 +1,8 @@
-import {
-  AbsList,
-  List,
-  MAX_POSITION,
-  MIN_POSITION,
-  Text,
-  Outline,
-} from "list-positions";
+import { AbsList, List, Text, Outline } from "list-positions";
 import { Anchor, Anchors } from "./anchor";
 
 // Helper functions.
-// See RichList for example usage.
+// See RichText for example usage.
 
 /**
  * Returns a span `{ start: Anchor, end: Anchor }` that covers precisely
@@ -20,6 +13,8 @@ import { Anchor, Anchors } from "./anchor";
  * including positions that are not currently present in list.
  * It may also "expand" to cover not-currently-present positions at
  * the slice's endpoints, depending on the value of `expand`.
+ *
+ * Invert with {@link sliceFromSpan}, possibly on a different list or a different device.
  *
  * @param expand Whether the span covers not-currently-present positions at
  * the slice's endpoints.
@@ -33,7 +28,7 @@ import { Anchor, Anchors } from "./anchor";
  * - "none": Does not expand.
  * This is the typical behavior for certain rich-text format keys, such as hyperlinks.
  *
- * @throws If `startIndex >= endIndex` (the slice is empty).
+ * @throws If `startIndex` or `endIndex` is not in the range `[0, list.length]`.
  */
 export function spanFromSlice(
   list: List<unknown> | Text | Outline | AbsList<unknown>,
@@ -41,39 +36,22 @@ export function spanFromSlice(
   endIndex: number,
   expand: "after" | "before" | "both" | "none" = "after"
 ): { start: Anchor; end: Anchor } {
-  if (startIndex >= endIndex) {
-    throw new Error(`startIndex >= endIndex: ${startIndex}, ${endIndex}`);
-  }
-
-  const posList = list instanceof AbsList ? list.list : list;
-
-  let start: Anchor;
-  if (expand === "before" || expand === "both") {
-    const pos =
-      startIndex === 0 ? MIN_POSITION : posList.positionAt(startIndex - 1);
-    start = { pos, before: false };
-  } else {
-    start = { pos: posList.positionAt(startIndex), before: true };
-  }
-
-  let end: Anchor;
-  if (expand === "after" || expand === "both") {
-    const pos =
-      endIndex === list.length ? MAX_POSITION : posList.positionAt(endIndex);
-    end = { pos, before: true };
-  } else {
-    end = { pos: posList.positionAt(endIndex - 1), before: false };
-  }
-
-  return { start, end };
+  const startExpand = expand === "before" || expand === "both";
+  const endExpand = expand === "after" || expand === "both";
+  return {
+    start: Anchors.anchorAt(list, startIndex, startExpand ? "left" : "right"),
+    end: Anchors.anchorAt(list, endIndex, endExpand ? "right" : "left"),
+  };
 }
 
 /**
  * Projects the span `{ start: Anchor, end: Anchor }` onto the given list,
  * returning the slice that it currently covers.
  *
- * The slice is expressed in terms of its startIndex and endIndex
- * (endIndex excluded).
+ * The slice is expressed in terms of its `startIndex` (inclusive) and `endIndex`
+ * (exclusive). Both are always in the range `[0, list.length]`.
+ *
+ * Inverts {@link spanFromSlice}.
  */
 export function sliceFromSpan(
   list: List<unknown> | Text | Outline | AbsList<unknown>,
@@ -93,7 +71,7 @@ export function sliceFromSpan(
  * Note that the map may contain null
  * values; when used in marks, these delete their keys.
  *
- * See also: RichList.insertWithFormat, which uses this function to ensure that
+ * See also: RichText.insertWithFormat, which uses this function to ensure that
  * newly-inserted values have the desired format.
  */
 export function diffFormats(

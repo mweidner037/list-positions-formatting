@@ -62,7 +62,7 @@ describe("TimestampFormatting", () => {
           assert.deepStrictEqual(formatting.getFormat(pos), span.format);
 
           // Sanity check all getters.
-          for (const [key, marks] of formatting.getAllMarks(pos)) {
+          for (const [key, marks] of formatting.getMarks(pos)) {
             assert.isDefined(marks, key);
             assert.isNotEmpty(marks, key);
           }
@@ -1186,7 +1186,7 @@ describe("TimestampFormatting", () => {
         allMarksSorted.sort((a, b) => a.timestamp - b.timestamp);
         assert.deepStrictEqual([...formatting.marks()], allMarksSorted);
         assert.deepStrictEqual(
-          formatting.getAllMarks(poss[3]).get("url"),
+          formatting.getMarks(poss[3]).get("url"),
           allMarksSorted
         );
 
@@ -1202,7 +1202,7 @@ describe("TimestampFormatting", () => {
         allMarksSorted.sort((a, b) => a.timestamp - b.timestamp);
         assert.deepStrictEqual([...formatting.marks()], allMarksSorted);
         assert.deepStrictEqual(
-          formatting.getAllMarks(poss[3]).get("url"),
+          formatting.getMarks(poss[3]).get("url"),
           allMarksSorted
         );
 

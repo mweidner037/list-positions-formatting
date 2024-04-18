@@ -93,12 +93,13 @@ Class `Formatting<M extends IMark>` implements the above marks-to-formatting pro
 
 Class Formatting does not specify the sort order on marks. Instead, you choose the sort order, by extending the `IMark` interface with extra fields (type parameter `M`) and supplying a `compareMarks` function that uses those fields. Alternatively, you can use the [TimestampFormatting](#class-timestampformatting) class, which chooses a reasonable default sort order.
 
-Misc features:
+Misc:
 
 - `addMark` and `deleteMark` return changes to the current formatting.
 - `save()` and `load(savedState)` save and load the current set of marks, similar to list-positions's save and load methods.
-- `getActiveMarks(pos)` and `getAllMarks(pos)` give you more info about the marks covering a given Position.
-- There is no way to modify an existing mark, and you should avoid modifying IMark objects in-place. Instead, delete the current mark and add a modified version.
+- `getActiveMarks(pos)` and `getMarks(pos)` give you more info about the marks covering a given Position.
+- There is no way to modify an existing mark, and you should not mutate IMark objects in-place. Instead, delete the current mark and add a modified version.
+- For technical reasons, you cannot use Formatting with a list that contains `MIN_POSITION` or `MAX_POSITION`. Calling `getFormat` on such a Position will throw an error, as will using the "out-of-bounds" Anchors `{ pos: MIN_POSITION, before: true }` or `{ pos: MAX_POSITION, before: false }`.
 
 **Warning:** Similar to list-positions's List class, you must [manage metadata](https://github.com/mweidner037/list-positions#managing-metadata) for a Formatting instance. Typically, you're already managing metadata for a List/Text/Outline/AbsList storing your actual values; it is then sufficient to share that list's `Order` with your Formatting instance, via the `order` constructor argument.
 
@@ -124,29 +125,29 @@ To create a TimestampMark, use `TimestampFormatting.newMark`.
 
 TimestampFormatting's sort order uses [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp), with ties broken by `creatorID`. This sort order works well in general, including in collaborative settings with or without a central server.
 
-### Class RichList
+### Class RichText
 
-Convenience wrapper for a List with TimestampFormatting.
+Convenience wrapper for [Text](https://github.com/mweidner037/list-positions#text) with TimestampFormatting.
 
-RichList has an API similar to a traditional rich-text data structure, combining indexed access, values, and formatting in a single object. E.g., it has a `getFormatAt(index)` method.
+RichText has an API similar to a traditional rich-text data structure, combining indexed access, values, and formatting in a single object. E.g., it has a `getFormatAt(index)` method.
 
 Notable methods:
 
 - `insertWithFormat(index, format, ...values)`: Inserts values and applies new formatting marks as needed so that the values have the exact given format. This is a common operation when working with a rich-text editor: the editor tells you to insert some new values and what format they should have.
 - `format(startIndex, endIndex, key, value, expand?)`: Formats the slice from `startIndex` to `endIndex` so that the given format key maps to `value`, by adding a new mark.
-- `formattedValues()`: Returns an efficient representation of the list's values and their current formatting. It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
+- `formattedChars()`: Returns an efficient representation of the text's characters and their current formatting. It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
 
-For other operations, you act on the List or TimestampFormatting directly. E.g., to delete a value, call `richList.list.deleteAt(index)`; to add a mark received from a collaborator, call `richList.formatting.addMark(mark)`.
+For other operations, you act on the Text or TimestampFormatting directly. E.g., to delete a value, call `richText.text.deleteAt(index)`; to add a mark received from a collaborator, call `richText.formatting.addMark(mark)`.
 
-RichList's `save()` and `load(savedState)` methods save the List, TimestampFormatting, and Order (metadata) states in a single JSON object. You can also save and load them separately.
+RichText's `save()` and `load(savedState)` methods save the Text, TimestampFormatting, and Order (metadata) states in a single JSON object. You can also save and load them separately.
 
-If you don't want to use RichList (e.g., because you are using an Outline instead of a List, or marks besides TimestampMarks), you can access the same functionality using the [Utilities](#utilities) below. Consider reading the [RichList source code](./src/rich_list.ts).
+If you don't want to use RichText (e.g., because you are using an List or Outline instead of a Text), you can access the same functionality using the [Utilities](#utilities) below. Consider reading the [RichText source code](./src/rich_text.ts).
 
 ### Utilities
 
-- `diffFormats(current, target)`: Returns changes (including null for deletions) to turn the `current` format into `target`. Core logic behind `RichList.insertWithFormat`.
+- `diffFormats(current, target)`: Returns changes (including null for deletions) to turn the `current` format into `target`. Core logic behind `RichText.insertWithFormat`.
 - `sliceFromSpan`, `spanFromSlice`: Convert between list-independent spans `{ start: Anchor, end: Anchor }` and list-specific slices `{ startIndex: number, endIndex: number }`.
-- `Anchors` static object: min and max Anchors, `equals` and `compare` functions for Anchors, and `indexOfAnchor`.
+- `Anchors` static object: `MIN_ANCHOR` and `MAX_ANCHOR`; `equals`, `compare`, and `validate` functions for Anchors; `indexOfAnchor` and `anchorAt`.
 
 ## Performance
 

@@ -34,7 +34,7 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "list-positions": "^0.7.0",
+    "list-positions": "^0.8.0",
     "maybe-random-string": "^1.0.0"
   },
   "devDependencies": {

@@ -103,7 +103,7 @@ export const Anchors = {
   ): number {
     Anchors.validate(anchor);
 
-    const posList = list instanceof AbsList ? list.list : list;
+    const posList = "list" in list ? list.list : list;
     return anchor.before
       ? posList.indexOfPosition(anchor.pos, "right")
       : posList.indexOfPosition(anchor.pos, "left") + 1;
@@ -128,7 +128,7 @@ export const Anchors = {
     index: number,
     bind: "left" | "right"
   ): Anchor {
-    const posList = list instanceof AbsList ? list.list : list;
+    const posList = "list" in list ? list.list : list;
     if (bind === "left") {
       return {
         pos: index === 0 ? MIN_POSITION : posList.positionAt(index - 1),

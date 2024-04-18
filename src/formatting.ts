@@ -236,7 +236,7 @@ export class Formatting<M extends IMark> {
    *
    * If the mark is already present, nothing happens. Here equality is tested
    * using {@link compareMarks}, **not** `===` equality.
-   * 
+   *
    * @throws If the mark uses an invalid anchor (see {@link Anchors.validate}) or `start >= end`.
    */
   addMark(mark: M): FormatChange[] {
@@ -731,7 +731,7 @@ export class Formatting<M extends IMark> {
     // Note: start = end = this.length is okay.
     if (startIndex === endIndex) return [];
 
-    const posList = list instanceof AbsList ? list.list : list;
+    const posList = "list" in list ? list.list : list;
 
     // As an optimization, restrict formattedSpans() to anchors that
     // could actually intersect with [start, end).

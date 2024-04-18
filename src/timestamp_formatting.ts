@@ -56,7 +56,7 @@ function compareTimestampMarks(a: TimestampMark, b: TimestampMark): number {
  *
  * See {@link TimestampFormatting.save} and {@link TimestampFormatting.load}.
  *
- * ### Format
+ * ## Format
  *
  * For advanced usage, you may read and write TimestampFormattingSavedStates directly.
  *

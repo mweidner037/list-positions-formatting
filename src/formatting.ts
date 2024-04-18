@@ -125,7 +125,7 @@ export type FormatChange = {
  *
  * See {@link Formatting.save} and {@link Formatting.load}.
  *
- * ### Format
+ * ## Format
  *
  * For advanced usage, you may read and write FormattingSavedStates directly.
  *
@@ -713,10 +713,10 @@ export class Formatting<M extends IMark> {
    * Specifically, returns an array of FormattedSlices in list order.
    * Each object describes a slice of the list with a single format.
    *
-   * Optionally, you may specify a range of indices `[start, end)` instead of
+   * Optionally, you may specify a range of indices `[startIndex, endIndex)` instead of
    * iterating the entire list.
    *
-   * @throws If `start < 0`, `end > list.length`, or `start > end`.
+   * @throws If `startIndex < 0`, `endIndex > list.length`, or `startIndex > endIndex`.
    */
   formattedSlices(
     list: List<unknown> | Text | Outline | AbsList<unknown>,

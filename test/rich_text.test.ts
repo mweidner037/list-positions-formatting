@@ -421,5 +421,27 @@ describe("RichText", () => {
       assert.deepStrictEqual(bob.formattedChars(), alice.formattedChars());
       checkMisc();
     });
+
+    test("errors", () => {
+      alice.text.insertAt(0, "one two three");
+
+      // Out of order, or equal.
+      assert.throws(() => alice.format(0, 0, "foo", "bar"));
+      assert.throws(() => alice.format(1, 1, "foo", "bar"));
+      assert.throws(() => alice.format(1, 0, "foo", "bar"));
+      assert.throws(() => alice.format(4, 2, "foo", "bar"));
+
+      // Out of bounds.
+      assert.throws(() => alice.format(-1, 1, "foo", "bar"));
+      assert.throws(() => alice.format(3, alice.text.length + 1, "foo", "bar"));
+
+      // text.length is okay.
+      assert.doesNotThrow(() =>
+        alice.format(0, alice.text.length, "foo", "bar")
+      );
+      assert.doesNotThrow(() =>
+        alice.format(3, alice.text.length, "foo", "bar")
+      );
+    });
   });
 });

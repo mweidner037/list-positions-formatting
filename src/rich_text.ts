@@ -40,16 +40,16 @@ export type FormattedChars = {
 /**
  * A JSON-serializable saved state for a `RichText<T>`.
  *
- * See RichText.save and RichText.load.
+ * See {@link RichText.save} and {@link RichText.load}.
  *
- * ### Format
+ * ## Format
  *
  * For advanced usage, you may read and write RichTextSavedStates directly.
  *
  * The format is merely a `...SavedState` object for each of:
  * - `richText.order` (class Order from [list-positions](https://github.com/mweidner037/list-positions#readme)).
  * - `richText.text` (class Text from [list-positions](https://github.com/mweidner037/list-positions#readme)).
- * - `richText.formatting` (class TimestampFormatting).
+ * - `richText.formatting` (class {@link TimestampFormatting}).
  */
 export type RichTextSavedState = {
   readonly order: OrderSavedState;
@@ -89,7 +89,7 @@ export class RichText {
    *
    * You may read and write this TimestampFormatting directly. RichText is
    * merely a wrapper that provides some convenience methods - in particular,
-   * `format` and `formattedChars`, which handle index/Anchor conversions for you.
+   * {@link format} and {@link formattedChars}, which handle index/Anchor conversions for you.
    */
   readonly formatting: TimestampFormatting;
 
@@ -125,9 +125,9 @@ export class RichText {
    * `creatorID`. Default: A random alphanumeric string from the
    * [maybe-random-string](https://github.com/mweidner037/maybe-random-string#readme) package.
    * @param options.expandRules The value of `expand` to use when one is
-   * not provided to `this.format` and for all marks created by `this.insertWithFormat`.
-   * Expressed as a function that inputs the mark's key and value
-   * and outputs the `expand` to use. Default: Always returns "after".
+   * not provided to `this.format`, and for all marks created by `this.insertWithFormat`.
+   * See {@link format} for a description of the possible values.
+   * Default: Always returns "after".
    */
   constructor(options?: {
     order?: Order;
@@ -175,7 +175,7 @@ export class RichText {
    *
    * @returns [starting insertion Position,
    * [new bunch's BunchMeta](https://github.com/mweidner037/list-positions#newMeta) (or null),
-   * newformatting marks]
+   * new formatting marks]
    * @throws If no chars are provided.
    */
   insertWithFormat(
@@ -193,8 +193,8 @@ export class RichText {
     newMarks: TimestampMark[]
   ] {
     const [startPos, newMeta] = this.text.insertAt(index, chars);
-    // Inserted positions all get the same initial format because they are not
-    // interleaved with any existing positios.
+    // Inserted positions all have the same initial format because they are not
+    // interleaved with any existing positions.
     const needsFormat = diffFormats(
       this.formatting.getFormat(startPos),
       format
@@ -247,6 +247,7 @@ export class RichText {
    * - "none": Does not expand.
    * This is the typical behavior for certain rich-text format keys, such as hyperlinks.
    * @returns [new mark, non-redundant format changes]
+   * @throws If `startIndex < 0`, `endIndex > this.text.length`, or `startIndex >= endIndex`.
    */
   format(
     startIndex: number,
@@ -255,6 +256,12 @@ export class RichText {
     value: any,
     expand?: "after" | "before" | "none" | "both"
   ): [newMark: TimestampMark, changes: FormatChange[]] {
+    if (startIndex >= endIndex) {
+      throw new Error(
+        `format called with startIndex >= endIndex: ${startIndex}, ${endIndex}`
+      );
+    }
+
     if (expand === undefined) {
       expand =
         this.expandRules === undefined ? "after" : this.expandRules(key, value);
@@ -299,24 +306,24 @@ export class RichText {
    * Returns an efficient representation of this RichText's chars and their current
    * formatting.
    *
-   * Specifically, this method returns an array of FormattedChars objects in list order.
+   * Specifically, this method returns an array of {@link FormattedChars} objects in list order.
    * Each object describes a slice of chars with a single format.
-   * It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
+   * The array is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
    *
-   * Optionally, you may specify a range of indices `[start, end)` instead of
+   * Optionally, you may specify a range of indices `[startIndex, endIndex)` instead of
    * iterating the entire list.
    *
-   * @throws If `start < 0`, `end > this.text.length`, or `start > end`.
+   * @throws If `startIndex < 0`, `endIndex > this.text.length`, or `startIndex > endIndex`.
    */
-  formattedChars(start?: number, end?: number): FormattedChars[] {
+  formattedChars(startIndex?: number, endIndex?: number): FormattedChars[] {
     const slices = this.formatting.formattedSlices(
       this.text,
-      start,
-      end
+      startIndex,
+      endIndex
     ) as (FormattedSlice & { chars?: string })[];
     if (slices.length === 0) return [];
 
-    const chars = this.text.slice(start, end);
+    const chars = this.text.slice(startIndex, endIndex);
     const charsStart = slices[0].startIndex;
     for (const slice of slices) {
       // slice only appears here, so it's okay to modify it in-place.
@@ -332,21 +339,21 @@ export class RichText {
    * Iterators over [position, char, format] tuples in the list, in list order.
    * These are its entries as a formatted & ordered map.
    *
-   * Typically, you should instead use `formattedChars()`, which returns a
+   * Typically, you should instead use {@link formattedChars}, which returns a
    * more efficient representation of the formatted chars.
    *
-   * Optionally, you may specify a range of indices `[start, end)` instead of
+   * Optionally, you may specify a range of indices `[startIndex, endIndex)` instead of
    * iterating the entire list.
    *
-   * @throws If `start < 0`, `end > this.text.length`, or `start > end`.
+   * @throws If `startIndex < 0`, `endIndex > this.text.length`, or `startIndex > endIndex`.
    */
   *entries(
-    start?: number,
-    end?: number
+    startIndex?: number,
+    endIndex?: number
   ): IterableIterator<
     [pos: Position, char: string, format: Record<string, any>]
   > {
-    for (const chars of this.formattedChars(start, end)) {
+    for (const chars of this.formattedChars(startIndex, endIndex)) {
       for (let index = chars.startIndex; index < chars.endIndex; index++) {
         const pos = this.text.positionAt(index);
         yield [pos, chars.chars[index - chars.startIndex], chars.format];

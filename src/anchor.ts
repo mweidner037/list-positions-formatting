@@ -104,9 +104,7 @@ export const Anchors = {
     Anchors.validate(anchor);
 
     const posList = "list" in list ? list.list : list;
-    return anchor.before
-      ? posList.indexOfPosition(anchor.pos, "right")
-      : posList.indexOfPosition(anchor.pos, "left") + 1;
+    return posList.indexOfCursor(anchor.pos, anchor.before ? "right" : "left");
   },
 
   /**
@@ -129,16 +127,6 @@ export const Anchors = {
     bind: "left" | "right"
   ): Anchor {
     const posList = "list" in list ? list.list : list;
-    if (bind === "left") {
-      return {
-        pos: index === 0 ? MIN_POSITION : posList.positionAt(index - 1),
-        before: false,
-      };
-    } else {
-      return {
-        pos: index === list.length ? MAX_POSITION : posList.positionAt(index),
-        before: true,
-      };
-    }
+    return { pos: posList.cursorAt(index, bind), before: bind !== "left" };
   },
 } as const;

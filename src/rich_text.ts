@@ -52,9 +52,9 @@ export type FormattedChars = {
  * - `richText.formatting` (class {@link TimestampFormatting}).
  */
 export type RichTextSavedState = {
-  readonly order: OrderSavedState;
-  readonly text: TextSavedState;
-  readonly formatting: TimestampFormattingSavedState;
+  order: OrderSavedState;
+  text: TextSavedState;
+  formatting: TimestampFormattingSavedState;
 };
 
 /**

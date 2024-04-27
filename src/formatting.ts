@@ -25,22 +25,22 @@ export interface IMark {
   /**
    * The mark's starting anchor.
    */
-  start: Anchor;
+  readonly start: Anchor;
   /**
    * The mark's ending anchor.
    */
-  end: Anchor;
+  readonly end: Anchor;
   /**
    * The mark's format key.
    */
-  key: string;
+  readonly key: string;
   /**
    * The mark's format value.
    *
    * A null value deletes `this.key`, causing it to no longer appear in
    * format objects. Any other value appears as-is in format objects.
    */
-  value: any;
+  readonly value: any;
 }
 
 /**

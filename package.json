@@ -1,6 +1,6 @@
 {
   "name": "@list-positions/formatting",
-  "version": "0.8.2",
+  "version": "1.0.0",
   "description": "Inline formatting for a list, e.g., collaborative rich text",
   "author": "Matthew Weidner",
   "license": "MIT",

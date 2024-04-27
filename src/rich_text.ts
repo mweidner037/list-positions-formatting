@@ -60,7 +60,7 @@ export type RichTextSavedState = {
 /**
  * Convenience wrapper for [Text](https://github.com/mweidner037/list-positions#text) with TimestampFormatting.
  *
- * See [RichText](https://github.com/mweidner037/list-formatting#class-richtext) in the readme.
+ * See [RichText](https://github.com/mweidner037/list-positions-formatting#class-richtext) in the readme.
  *
  * RichText has an API similar to a traditional rich-text data structure,
  * combining indexed access, characters, and formatting in a single object.

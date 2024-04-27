@@ -1,4 +1,4 @@
-# list-formatting
+# @list-positions/formatting
 
 Inline formatting for a list, e.g., collaborative rich text
 
@@ -6,7 +6,7 @@ Inline formatting for a list, e.g., collaborative rich text
 - [Concepts](#concepts)
 - [API](#api)
 - [Performance](#performance)
-- [Demos ↗️](https://github.com/mweidner037/list-demos)
+- [Demos ↗️](https://github.com/mweidner037/list-positions-demos)
 
 ## About
 
@@ -23,7 +23,7 @@ Each formatting _mark_ is defined in terms of `Position`s from the list-position
 
 ## Concepts
 
-list-formatting implements the core of the [Peritext rich-text CRDT](https://www.inkandswitch.com/peritext/) (though it is not itself a CRDT). It uses many of Peritext's concepts, which the previous link describes in detail; here is a self-contained summary.
+@list-positions/formatting implements the core of the [Peritext rich-text CRDT](https://www.inkandswitch.com/peritext/) (though it is not itself a CRDT). It uses many of Peritext's concepts, which the previous link describes in detail; here is a self-contained summary.
 
 ### Anchors
 

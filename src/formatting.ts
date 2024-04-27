@@ -14,7 +14,7 @@ import { Anchor, Anchors } from "./anchor";
  * An inline formatting mark, i.e., an instruction to change the format of a
  * range of values.
  *
- * See [Marks](https://github.com/mweidner037/list-formatting#marks) in the readme.
+ * See [Marks](https://github.com/mweidner037/list-positions-formatting#marks) in the readme.
  *
  * IMark is an interface that a concrete mark type should implement, extending it
  * with extra fields used by its `compareMarks` function.
@@ -138,7 +138,7 @@ export type FormattingSavedState<M extends IMark> = M[];
 /**
  * A local data structure storing a set of marks.
  *
- * See [Formatting](https://github.com/mweidner037/list-formatting#class-formatting) in the readme.
+ * See [Formatting](https://github.com/mweidner037/list-positions-formatting#class-formatting) in the readme.
  *
  * Mutate the set of marks using {@link addMark} and {@link deleteMark}.
  * Other methods let you query the formatting resulting from the current set of marks.

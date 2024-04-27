@@ -16,7 +16,7 @@ import {
  *
  * An *anchor* is a spot immediately before or after a
  * [position](https://github.com/mweidner037/list-positions#about).
- * See [Anchors](https://github.com/mweidner037/list-formatting#anchors) in the readme.
+ * See [Anchors](https://github.com/mweidner037/list-positions-formatting#anchors) in the readme.
  *
  * Each formatting mark starts and ends at an anchor.
  * Using anchors instead of positions lets the mark choose whether it "expands"

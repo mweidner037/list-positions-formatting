@@ -1,16 +1,16 @@
 {
-  "name": "list-formatting",
-  "version": "0.8.1",
+  "name": "@list-positions/formatting",
+  "version": "0.8.2",
   "description": "Inline formatting for a list, e.g., collaborative rich text",
   "author": "Matthew Weidner",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mweidner037/list-formatting/issues"
+    "url": "https://github.com/mweidner037/list-positions-formatting/issues"
   },
-  "homepage": "https://github.com/mweidner037/list-formatting/tree/master/#readme",
+  "homepage": "https://github.com/mweidner037/list-positions-formatting/tree/master/#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mweidner037/list-formatting.git"
+    "url": "git+https://github.com/mweidner037/list-positions-formatting.git"
   },
   "keywords": [
     "formatting",

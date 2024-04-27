@@ -69,7 +69,7 @@ export type TimestampFormattingSavedState = FormattingSavedState<TimestampMark>;
 /**
  * A local data structure storing a set of marks.
  *
- * This class is the same as [Formatting](https://github.com/mweidner037/list-formatting#class-formatting)
+ * This class is the same as [Formatting](https://github.com/mweidner037/list-positions-formatting#class-formatting)
  * except that it chooses a reasonable
  * default sort order, on marks of type {@link TimestampMark}.
  *

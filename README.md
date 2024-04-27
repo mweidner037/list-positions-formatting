@@ -12,18 +12,18 @@ Inline formatting for a list, e.g., collaborative rich text
 
 This library complements [list-positions](https://github.com/mweidner037/list-positions#readme). It lets you add _inline formatting_ to any list from that library: bold, font size, hyperlinks, etc. Inline formatting is a key component of rich text, and you can also use it for [spreadsheet rows/columns](https://mattweidner.com/2023/09/26/crdt-survey-2.html#spreadsheet-formatting) and other lists.
 
-Each formatting _mark_ is defined in terms of `Position`s from the list-positions library, independent of a specific list or text string. So you can store formatting marks separately from the list itself, or share marks between multiple lists. In particular, you can share marks between lists on different devices, enabling DIY collaborative rich-text editing.
+Each formatting _mark_ is defined in terms of `Position`s from the list-positions library, independent of a specific list or text string. So you can store formatting marks separately from the list itself, or share marks between multiple lists. In particular, you can share marks between lists on different devices, enabling collaborative rich-text editing on top of a variety of network architectures.
 
 ### Example Use Cases
 
-1. Standard collaborative rich-text editing.
-2. Store annotations on a text document, in the style of [atJSON](https://github.com/CondeNast/atjson#what-does-a-document-look-like) but with the array indices replaced by immutable _anchors_ that automatically accommodate future edits.
+1. Standard collaborative rich-text editing: When a user creates a mark, broadcast it to all collaborators, who add it to their own state.
+2. Store annotations on a text document, in the style of [atJSON](https://github.com/CondeNast/atjson#what-does-a-document-look-like) but with the array indices replaced by `Anchor`s, which are immutable and automatically accommodate future edits.
 3. In a rich-text editor with suggested changes, you could store suggested formatting marks separately and use `Formatting.addMark`/`deleteMark` to toggle between the current vs suggested formatting.
 4. Server authority: A user can optimistically add a formatting mark to their local instance, send it to a server, and then delete the mark if the server rejects it (e.g., it was outside the range that the user is allowed to edit).
 
 ## Concepts
 
-@list-positions/formatting implements the core of the [Peritext rich-text CRDT](https://www.inkandswitch.com/peritext/) (though it is not itself a CRDT). It uses many of Peritext's concepts, which the previous link describes in detail; here is a self-contained summary.
+@list-positions/formatting implements the core of the [Peritext rich-text CRDT](https://www.inkandswitch.com/peritext/), though it is not itself a CRDT. It uses many of Peritext's concepts, which the previous link describes in detail; here is a self-contained summary.
 
 ### Anchors
 

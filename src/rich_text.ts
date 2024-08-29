@@ -6,7 +6,7 @@ import {
   Text,
   TextSavedState,
 } from "list-positions";
-import { FormatChange, FormattedSlice } from "./formatting";
+import { FormatChange } from "./formatting";
 import { diffFormats, spanFromSlice } from "./helpers";
 import {
   TimestampFormatting,
@@ -15,10 +15,10 @@ import {
 } from "./timestamp_formatting";
 
 /**
- * A slice of chars with a single format, returned by
+ * A slice of chars (or an embed) with a single format, returned by
  * {@link RichText.formattedChars}.
  */
-export type FormattedChars = {
+export type FormattedChars<E extends object | never = never> = {
   /**
    * The slice's starting index (inclusive).
    */
@@ -28,17 +28,18 @@ export type FormattedChars = {
    */
   readonly endIndex: number;
   /**
-   * The slice's chars, i.e., `richText.text.slice(startIndex, endIndex)`.
+   * The slice's chars, i.e., `richText.text.slice(startIndex, endIndex)`,
+   * or the slice's embed.
    */
-  readonly chars: string;
+  readonly charsOrEmbed: string | E;
   /**
-   * The common format for all of the slice's chars.
+   * The common format for the entire slice.
    */
   readonly format: Record<string, any>;
 };
 
 /**
- * A JSON-serializable saved state for a `RichText<T>`.
+ * A JSON-serializable saved state for a `RichText<E>`.
  *
  * See {@link RichText.save} and {@link RichText.load}.
  *
@@ -48,17 +49,17 @@ export type FormattedChars = {
  *
  * The format is merely a `...SavedState` object for each of:
  * - `richText.order` (class Order from [list-positions](https://github.com/mweidner037/list-positions#readme)).
- * - `richText.text` (class Text from [list-positions](https://github.com/mweidner037/list-positions#readme)).
+ * - `richText.text` (class `Text<E>` from [list-positions](https://github.com/mweidner037/list-positions#readme)).
  * - `richText.formatting` (class {@link TimestampFormatting}).
  */
-export type RichTextSavedState = {
+export type RichTextSavedState<E extends object | never = never> = {
   order: OrderSavedState;
-  text: TextSavedState;
+  text: TextSavedState<E>;
   formatting: TimestampFormattingSavedState;
 };
 
 /**
- * Convenience wrapper for [Text](https://github.com/mweidner037/list-positions#text) with TimestampFormatting.
+ * Convenience wrapper for a [Text\<E\>](https://github.com/mweidner037/list-positions#text) with TimestampFormatting.
  *
  * See [RichText](https://github.com/mweidner037/list-positions-formatting#class-richtext) in the readme.
  *
@@ -67,8 +68,11 @@ export type RichTextSavedState = {
  *
  * For operations that only involve `this.text` or `this.formatting`, call methods
  * on those properties directly.
+ *
+ * @typeParam E - The type of embeds in `this.text`, or `never` (no embeds allowed) if not specified.
+ * Embeds must be non-null objects.
  */
-export class RichText {
+export class RichText<E extends object | never = never> {
   /**
    * The Order that manages this RichText's Positions and their metadata.
    *
@@ -83,7 +87,7 @@ export class RichText {
    * `insertWithFormat`, which wraps `text.insertAt` to ensure
    * a given format.
    */
-  readonly text: Text;
+  readonly text: Text<E>;
   /**
    * The text's formatting.
    *
@@ -119,7 +123,7 @@ export class RichText {
    * `options.text` are provided, a `new Order()` is used.
    * Exclusive with `options.text`.
    * @param options.text The Text to use for `this.text`. If not provided,
-   * a `new Text(options?.order)` is used. Exclusive with `options.order`.
+   * a `new Text<E>(options?.order)` is used. Exclusive with `options.order`.
    * @param options.replicaID The replica ID for `this.formatting`
    * (_not_ `this.order`). All of our created marks will use it as their
    * `creatorID`. Default: A random alphanumeric string from the
@@ -131,7 +135,7 @@ export class RichText {
    */
   constructor(options?: {
     order?: Order;
-    text?: Text;
+    text?: Text<E>;
     replicaID?: string;
     expandRules?: (
       key: string,
@@ -155,7 +159,7 @@ export class RichText {
   }
 
   /**
-   * Inserts the given char at `index` using `this.text.insertAt`,
+   * Inserts the given char (or embed) at `index` using `this.text.insertAt`,
    * and applies new formatting marks
    * as needed so that the char has the exact given format.
    *
@@ -166,7 +170,7 @@ export class RichText {
   insertWithFormat(
     index: number,
     format: Record<string, any>,
-    char: string
+    charOrEmbed: string | E
   ): [pos: Position, newMeta: BunchMeta | null, newMarks: TimestampMark[]];
   /**
    * Inserts the given chars at `index` using `this.text.insertAt`,
@@ -186,13 +190,13 @@ export class RichText {
   insertWithFormat(
     index: number,
     format: Record<string, any>,
-    chars: string
+    charsOrEmbed: string | E
   ): [
     startPos: Position,
     newMeta: BunchMeta | null,
     newMarks: TimestampMark[]
   ] {
-    const [startPos, newMeta] = this.text.insertAt(index, chars);
+    const [startPos, newMeta] = this.text.insertAt(index, charsOrEmbed);
     // Inserted positions all have the same initial format because they are not
     // interleaved with any existing positions.
     const needsFormat = diffFormats(
@@ -206,7 +210,7 @@ export class RichText {
       const { start, end } = spanFromSlice(
         this.text,
         index,
-        index + chars.length,
+        index + (typeof charsOrEmbed === "string" ? charsOrEmbed.length : 1),
         expand
       );
       const mark = this.formatting.newMark(start, end, key, value);
@@ -293,21 +297,21 @@ export class RichText {
   }
 
   /**
-   * Iterates over an efficient representation of this RichText's chars and their current
-   * formatting.
+   * Iterates over an efficient representation of this RichText's chars (and embeds)
+   * and their current formatting.
    *
    * Same as {@link formattedChars}.
    */
-  [Symbol.iterator](): IterableIterator<FormattedChars> {
+  [Symbol.iterator](): IterableIterator<FormattedChars<E>> {
     return this.formattedChars()[Symbol.iterator]();
   }
 
   /**
-   * Returns an efficient representation of this RichText's chars and their current
-   * formatting.
+   * Returns an efficient representation of this RichText's chars (and embeds)
+   * and their current formatting.
    *
    * Specifically, this method returns an array of {@link FormattedChars} objects in list order.
-   * Each object describes a slice of chars with a single format.
+   * Each object describes a slice of chars (or an embed) with a single format.
    * The array is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
    *
    * Optionally, you may specify a range of indices `[startIndex, endIndex)` instead of
@@ -315,28 +319,50 @@ export class RichText {
    *
    * @throws If `startIndex < 0`, `endIndex > this.text.length`, or `startIndex > endIndex`.
    */
-  formattedChars(startIndex?: number, endIndex?: number): FormattedChars[] {
-    const slices = this.formatting.formattedSlices(
-      this.text,
+  formattedChars(
+    startIndex = 0,
+    endIndex = this.text.length
+  ): FormattedChars<E>[] {
+    const ans: FormattedChars<E>[] = [];
+    let index = startIndex;
+    for (const charsOrEmbed of this.text.sliceWithEmbeds(
       startIndex,
       endIndex
-    ) as (FormattedSlice & { chars?: string })[];
-    if (slices.length === 0) return [];
-
-    const chars = this.text.slice(startIndex, endIndex);
-    const charsStart = slices[0].startIndex;
-    for (const slice of slices) {
-      // slice only appears here, so it's okay to modify it in-place.
-      slice.chars = chars.slice(
-        slice.startIndex - charsStart,
-        slice.endIndex - charsStart
-      );
+    )) {
+      if (typeof charsOrEmbed === "string") {
+        const charsStart = index;
+        const slices = this.formatting.formattedSlices(
+          this.text,
+          index,
+          index + charsOrEmbed.length
+        );
+        for (const slice of slices) {
+          ans.push({
+            startIndex: slice.startIndex,
+            endIndex: slice.endIndex,
+            charsOrEmbed: charsOrEmbed.slice(
+              slice.startIndex - charsStart,
+              slice.endIndex - charsStart
+            ),
+            format: slice.format,
+          });
+        }
+        index += charsOrEmbed.length;
+      } else {
+        ans.push({
+          startIndex: index,
+          endIndex: index + 1,
+          charsOrEmbed,
+          format: this.formatting.getFormat(this.text.positionAt(index)),
+        });
+        index++;
+      }
     }
-    return slices as FormattedChars[];
+    return ans;
   }
 
   /**
-   * Iterators over [position, char, format] tuples in the list, in list order.
+   * Iterators over [position, char (or embed), format] tuples in the list, in list order.
    * These are its entries as a formatted & ordered map.
    *
    * Typically, you should instead use {@link formattedChars}, which returns a
@@ -351,12 +377,23 @@ export class RichText {
     startIndex?: number,
     endIndex?: number
   ): IterableIterator<
-    [pos: Position, char: string, format: Record<string, any>]
+    [pos: Position, charOrEmbed: string | E, format: Record<string, any>]
   > {
     for (const chars of this.formattedChars(startIndex, endIndex)) {
-      for (let index = chars.startIndex; index < chars.endIndex; index++) {
-        const pos = this.text.positionAt(index);
-        yield [pos, chars.chars[index - chars.startIndex], chars.format];
+      if (typeof chars.charsOrEmbed === "string") {
+        for (let index = chars.startIndex; index < chars.endIndex; index++) {
+          yield [
+            this.text.positionAt(index),
+            chars.charsOrEmbed[index - chars.startIndex],
+            chars.format,
+          ];
+        }
+      } else {
+        yield [
+          this.text.positionAt(chars.startIndex),
+          chars.charsOrEmbed,
+          chars.format,
+        ];
       }
     }
   }
@@ -374,7 +411,7 @@ export class RichText {
    * and `this.formatting`) separately. If you do so, be sure to load `this.order`
    * before the others.
    */
-  save(): RichTextSavedState {
+  save(): RichTextSavedState<E> {
     return {
       order: this.order.save(),
       text: this.text.save(),
@@ -388,7 +425,7 @@ export class RichText {
    * Loading sets our text and formatting to match the saved RichText's,
    * *overwriting* our current state.
    */
-  load(savedState: RichTextSavedState): void {
+  load(savedState: RichTextSavedState<E>): void {
     this.order.load(savedState.order);
     this.text.load(savedState.text);
     this.formatting.load(savedState.formatting);

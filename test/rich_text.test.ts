@@ -96,7 +96,7 @@ describe("RichText", () => {
             startIndex: newStartIndex,
             endIndex: newEndIndex,
             format: slice.format,
-            chars: slice.chars.slice(
+            charsOrEmbed: slice.charsOrEmbed.slice(
               newStartIndex - slice.startIndex,
               newEndIndex - slice.startIndex
             ),
@@ -112,7 +112,12 @@ describe("RichText", () => {
       const chars = "one two three";
       const [, , newMarks] = alice.insertWithFormat(0, {}, chars);
       assert.deepStrictEqual(alice.formattedChars(), [
-        { startIndex: 0, endIndex: chars.length, chars, format: {} },
+        {
+          startIndex: 0,
+          endIndex: chars.length,
+          charsOrEmbed: chars,
+          format: {},
+        },
       ]);
       assert.deepStrictEqual(newMarks, []);
       checkMisc();
@@ -129,7 +134,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: chars.length,
-          chars,
+          charsOrEmbed: chars,
           format: { bold: true },
         },
       ]);
@@ -160,7 +165,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: alice.text.length,
-          chars: "zero one two three",
+          charsOrEmbed: "zero one two three",
           format: { bold: true },
         },
       ]);
@@ -184,7 +189,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: alice.text.length,
-          chars: "zero one two three",
+          charsOrEmbed: "zero one two three",
           format: { url: "www1" },
         },
       ]);
@@ -210,19 +215,19 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 4,
-          chars: "one ",
+          charsOrEmbed: "one ",
           format: { bold: true },
         },
         {
           startIndex: 4,
           endIndex: 8,
-          chars: "two ",
+          charsOrEmbed: "two ",
           format: {},
         },
         {
           startIndex: 8,
           endIndex: 13,
-          chars: "three",
+          charsOrEmbed: "three",
           format: { bold: true },
         },
       ]);
@@ -252,19 +257,19 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 4,
-          chars: "one ",
+          charsOrEmbed: "one ",
           format: { bold: true, url: "www1" },
         },
         {
           startIndex: 4,
           endIndex: 8,
-          chars: "two ",
+          charsOrEmbed: "two ",
           format: { italic: true, url: "www2" },
         },
         {
           startIndex: 8,
           endIndex: 13,
-          chars: "three",
+          charsOrEmbed: "three",
           format: { bold: true, url: "www1" },
         },
       ]);
@@ -311,19 +316,19 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 4,
-          chars: "one ",
+          charsOrEmbed: "one ",
           format: {},
         },
         {
           startIndex: 4,
           endIndex: 8,
-          chars: "two ",
+          charsOrEmbed: "two ",
           format: { bold: true },
         },
         {
           startIndex: 8,
           endIndex: 13,
-          chars: "three",
+          charsOrEmbed: "three",
           format: {},
         },
       ]);
@@ -364,7 +369,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 13,
-          chars: "one two three",
+          charsOrEmbed: "one two three",
           format: { bold: true },
         },
       ]);
@@ -414,7 +419,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 13,
-          chars: "one two three",
+          charsOrEmbed: "one two three",
           format: { bold: true },
         },
       ]);

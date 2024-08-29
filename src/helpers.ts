@@ -1,4 +1,4 @@
-import { AbsList, List, Text, Outline } from "list-positions";
+import { AbsList, List, Outline, Text } from "list-positions";
 import { Anchor, Anchors } from "./anchor";
 
 // Helper functions.
@@ -31,7 +31,7 @@ import { Anchor, Anchors } from "./anchor";
  * @throws If `startIndex` or `endIndex` is not in the range `[0, list.length]`.
  */
 export function spanFromSlice(
-  list: List<unknown> | Text | Outline | AbsList<unknown>,
+  list: List<unknown> | Text<object | never> | Outline | AbsList<unknown>,
   startIndex: number,
   endIndex: number,
   expand: "after" | "before" | "both" | "none" = "after"
@@ -54,7 +54,7 @@ export function spanFromSlice(
  * Inverts {@link spanFromSlice}.
  */
 export function sliceFromSpan(
-  list: List<unknown> | Text | Outline | AbsList<unknown>,
+  list: List<unknown> | Text<object | never> | Outline | AbsList<unknown>,
   start: Anchor,
   end: Anchor
 ): { startIndex: number; endIndex: number } {

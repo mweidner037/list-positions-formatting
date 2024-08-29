@@ -1,12 +1,12 @@
 import {
-  BunchIDs,
   AbsList,
+  BunchIDs,
   List,
-  Text,
   MIN_POSITION,
   Order,
   Outline,
   Position,
+  Text,
 } from "list-positions";
 import { Anchor, Anchors } from "./anchor";
 
@@ -719,7 +719,7 @@ export class Formatting<M extends IMark> {
    * @throws If `startIndex < 0`, `endIndex > list.length`, or `startIndex > endIndex`.
    */
   formattedSlices(
-    list: List<unknown> | Text | Outline | AbsList<unknown>,
+    list: List<unknown> | Text<object | never> | Outline | AbsList<unknown>,
     startIndex = 0,
     endIndex = list.length
   ): FormattedSlice[] {

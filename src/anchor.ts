@@ -1,14 +1,14 @@
 import {
   AbsList,
+  BunchIDs,
   List,
-  Text,
   MAX_POSITION,
   MIN_POSITION,
   Order,
   Outline,
   Position,
   positionEquals,
-  BunchIDs,
+  Text,
 } from "list-positions";
 
 /**
@@ -98,7 +98,7 @@ export const Anchors = {
    * calls this function twice.
    */
   indexOfAnchor(
-    list: List<unknown> | Text | Outline | AbsList<unknown>,
+    list: List<unknown> | Text<object | never> | Outline | AbsList<unknown>,
     anchor: Anchor
   ): number {
     Anchors.validate(anchor);
@@ -122,7 +122,7 @@ export const Anchors = {
    * @throws If index is not in the range `[0, list.length]`.
    */
   anchorAt(
-    list: List<unknown> | Text | Outline | AbsList<unknown>,
+    list: List<unknown> | Text<object | never> | Outline | AbsList<unknown>,
     index: number,
     bind: "left" | "right"
   ): Anchor {

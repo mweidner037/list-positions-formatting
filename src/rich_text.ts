@@ -62,7 +62,7 @@ export type RichTextSavedState<E extends object | never = never> = {
 /**
  * Convenience wrapper for a [Text\<E\>](https://github.com/mweidner037/list-positions#texte) with TimestampFormatting.
  *
- * See [RichText](https://github.com/mweidner037/list-positions-formatting#class-richtext) in the readme.
+ * See [RichText](https://github.com/mweidner037/list-positions-formatting#class-richtexte) in the readme.
  *
  * RichText has an API similar to a traditional rich-text data structure,
  * combining indexed access, characters, and formatting in a single object.

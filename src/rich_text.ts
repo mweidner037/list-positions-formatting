@@ -271,7 +271,12 @@ export class RichText<E extends object | never = never> {
         this.expandRules === undefined ? "after" : this.expandRules(key, value);
     }
 
-    const { start, end } = spanFromSlice(this.text, startIndex, endIndex);
+    const { start, end } = spanFromSlice(
+      this.text,
+      startIndex,
+      endIndex,
+      expand
+    );
     const mark = this.formatting.newMark(start, end, key, value);
     const changes = this.formatting.addMark(mark);
     this.onNewMarks?.([mark]);

@@ -101,13 +101,13 @@ describe("RichText", () => {
             startIndex: newStartIndex,
             endIndex: newEndIndex,
             format: slice.format,
-            charsOrEmbed:
-              typeof slice.charsOrEmbed === "string"
-                ? slice.charsOrEmbed.slice(
+            content:
+              typeof slice.content === "string"
+                ? slice.content.slice(
                     newStartIndex - slice.startIndex,
                     newEndIndex - slice.startIndex
                   )
-                : slice.charsOrEmbed,
+                : slice.content,
           });
         }
       }
@@ -123,7 +123,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: chars.length,
-          charsOrEmbed: chars,
+          content: chars,
           format: {},
         },
       ]);
@@ -142,7 +142,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: chars.length,
-          charsOrEmbed: chars,
+          content: chars,
           format: { bold: true },
         },
       ]);
@@ -173,7 +173,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: alice.text.length,
-          charsOrEmbed: "zero one two three",
+          content: "zero one two three",
           format: { bold: true },
         },
       ]);
@@ -197,7 +197,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: alice.text.length,
-          charsOrEmbed: "zero one two three",
+          content: "zero one two three",
           format: { url: "www1" },
         },
       ]);
@@ -223,19 +223,19 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 4,
-          charsOrEmbed: "one ",
+          content: "one ",
           format: { bold: true },
         },
         {
           startIndex: 4,
           endIndex: 8,
-          charsOrEmbed: "two ",
+          content: "two ",
           format: {},
         },
         {
           startIndex: 8,
           endIndex: 13,
-          charsOrEmbed: "three",
+          content: "three",
           format: { bold: true },
         },
       ]);
@@ -265,19 +265,19 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 4,
-          charsOrEmbed: "one ",
+          content: "one ",
           format: { bold: true, url: "www1" },
         },
         {
           startIndex: 4,
           endIndex: 8,
-          charsOrEmbed: "two ",
+          content: "two ",
           format: { italic: true, url: "www2" },
         },
         {
           startIndex: 8,
           endIndex: 13,
-          charsOrEmbed: "three",
+          content: "three",
           format: { bold: true, url: "www1" },
         },
       ]);
@@ -323,7 +323,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 1,
-          charsOrEmbed: { a: "foo" },
+          content: { a: "foo" },
           format: { bold: true },
         },
       ]);
@@ -349,25 +349,25 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 1,
-          charsOrEmbed: { a: "foo" },
+          content: { a: "foo" },
           format: { bold: true },
         },
         {
           startIndex: 1,
           endIndex: 3,
-          charsOrEmbed: "he",
+          content: "he",
           format: { bold: true },
         },
         {
           startIndex: 3,
           endIndex: 4,
-          charsOrEmbed: { b: "bar" },
+          content: { b: "bar" },
           format: {},
         },
         {
           startIndex: 4,
           endIndex: 7,
-          charsOrEmbed: "llo",
+          content: "llo",
           format: { bold: true },
         },
       ]);
@@ -395,19 +395,19 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 4,
-          charsOrEmbed: "one ",
+          content: "one ",
           format: {},
         },
         {
           startIndex: 4,
           endIndex: 8,
-          charsOrEmbed: "two ",
+          content: "two ",
           format: { bold: true },
         },
         {
           startIndex: 8,
           endIndex: 13,
-          charsOrEmbed: "three",
+          content: "three",
           format: {},
         },
       ]);
@@ -448,7 +448,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 13,
-          charsOrEmbed: "one two three",
+          content: "one two three",
           format: { bold: true },
         },
       ]);
@@ -498,7 +498,7 @@ describe("RichText", () => {
         {
           startIndex: 0,
           endIndex: 13,
-          charsOrEmbed: "one two three",
+          content: "one two three",
           format: { bold: true },
         },
       ]);
@@ -555,26 +555,26 @@ describe("RichText", () => {
       alice.text.insertAt(3, { a: "foo" });
       alice.text.insertAt(7, { b: "bar" });
       assert.deepStrictEqual(alice.formattedChars(), [
-        { startIndex: 0, endIndex: 3, charsOrEmbed: "one", format: {} },
-        { startIndex: 3, endIndex: 4, charsOrEmbed: { a: "foo" }, format: {} },
-        { startIndex: 4, endIndex: 7, charsOrEmbed: "two", format: {} },
-        { startIndex: 7, endIndex: 8, charsOrEmbed: { b: "bar" }, format: {} },
-        { startIndex: 8, endIndex: 13, charsOrEmbed: "three", format: {} },
+        { startIndex: 0, endIndex: 3, content: "one", format: {} },
+        { startIndex: 3, endIndex: 4, content: { a: "foo" }, format: {} },
+        { startIndex: 4, endIndex: 7, content: "two", format: {} },
+        { startIndex: 7, endIndex: 8, content: { b: "bar" }, format: {} },
+        { startIndex: 8, endIndex: 13, content: "three", format: {} },
       ]);
 
       // Format that's specific to an embed.
       const [newMark, changes] = alice.format(3, 4, "bold", true, "none");
       assert.deepStrictEqual(alice.formattedChars(), [
-        { startIndex: 0, endIndex: 3, charsOrEmbed: "one", format: {} },
+        { startIndex: 0, endIndex: 3, content: "one", format: {} },
         {
           startIndex: 3,
           endIndex: 4,
-          charsOrEmbed: { a: "foo" },
+          content: { a: "foo" },
           format: { bold: true },
         },
-        { startIndex: 4, endIndex: 7, charsOrEmbed: "two", format: {} },
-        { startIndex: 7, endIndex: 8, charsOrEmbed: { b: "bar" }, format: {} },
-        { startIndex: 8, endIndex: 13, charsOrEmbed: "three", format: {} },
+        { startIndex: 4, endIndex: 7, content: "two", format: {} },
+        { startIndex: 7, endIndex: 8, content: { b: "bar" }, format: {} },
+        { startIndex: 8, endIndex: 13, content: "three", format: {} },
       ]);
       assert.deepStrictEqual(newMark, {
         start: { pos: alice.text.positionAt(3), before: true },
@@ -598,33 +598,33 @@ describe("RichText", () => {
       // Format that strictly includes an embed.
       const [newMark2, changes2] = alice.format(5, 10, "font-size", 15);
       assert.deepStrictEqual(alice.formattedChars(), [
-        { startIndex: 0, endIndex: 3, charsOrEmbed: "one", format: {} },
+        { startIndex: 0, endIndex: 3, content: "one", format: {} },
         {
           startIndex: 3,
           endIndex: 4,
-          charsOrEmbed: { a: "foo" },
+          content: { a: "foo" },
           format: { bold: true },
         },
-        { startIndex: 4, endIndex: 5, charsOrEmbed: "t", format: {} },
+        { startIndex: 4, endIndex: 5, content: "t", format: {} },
         {
           startIndex: 5,
           endIndex: 7,
-          charsOrEmbed: "wo",
+          content: "wo",
           format: { "font-size": 15 },
         },
         {
           startIndex: 7,
           endIndex: 8,
-          charsOrEmbed: { b: "bar" },
+          content: { b: "bar" },
           format: { "font-size": 15 },
         },
         {
           startIndex: 8,
           endIndex: 10,
-          charsOrEmbed: "th",
+          content: "th",
           format: { "font-size": 15 },
         },
-        { startIndex: 10, endIndex: 13, charsOrEmbed: "ree", format: {} },
+        { startIndex: 10, endIndex: 13, content: "ree", format: {} },
       ]);
       assert.deepStrictEqual(newMark2, {
         start: { pos: alice.text.positionAt(5), before: true },

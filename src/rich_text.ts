@@ -28,10 +28,11 @@ export type FormattedChars<E extends object | never = never> = {
    */
   readonly endIndex: number;
   /**
-   * The slice's chars, i.e., `richText.text.slice(startIndex, endIndex)`,
-   * or the slice's embed.
+   * The slice's content: either
+   * - a series of chars (`richText.text.slice(startIndex, endIndex)`), or
+   * - a single embed (`richText.text.getAt(startIndex)`).
    */
-  readonly charsOrEmbed: string | E;
+  readonly content: string | E;
   /**
    * The common format for the entire slice.
    */
@@ -59,7 +60,7 @@ export type RichTextSavedState<E extends object | never = never> = {
 };
 
 /**
- * Convenience wrapper for a [Text\<E\>](https://github.com/mweidner037/list-positions#text) with TimestampFormatting.
+ * Convenience wrapper for a [Text\<E\>](https://github.com/mweidner037/list-positions#texte) with TimestampFormatting.
  *
  * See [RichText](https://github.com/mweidner037/list-positions-formatting#class-richtext) in the readme.
  *
@@ -80,7 +81,7 @@ export class RichText<E extends object | never = never> {
    */
   readonly order: Order;
   /**
-   * The plain-text characters.
+   * The plain-text characters (plus embeds).
    *
    * You may read and write this Text directly. RichText is merely a wrapper
    * that provides some convenience methods - in particular,
@@ -345,7 +346,7 @@ export class RichText<E extends object | never = never> {
           ans.push({
             startIndex: slice.startIndex,
             endIndex: slice.endIndex,
-            charsOrEmbed: charsOrEmbed.slice(
+            content: charsOrEmbed.slice(
               slice.startIndex - charsStart,
               slice.endIndex - charsStart
             ),
@@ -357,7 +358,7 @@ export class RichText<E extends object | never = never> {
         ans.push({
           startIndex: index,
           endIndex: index + 1,
-          charsOrEmbed,
+          content: charsOrEmbed,
           format: this.formatting.getFormat(this.text.positionAt(index)),
         });
         index++;
@@ -385,18 +386,18 @@ export class RichText<E extends object | never = never> {
     [pos: Position, charOrEmbed: string | E, format: Record<string, any>]
   > {
     for (const chars of this.formattedChars(startIndex, endIndex)) {
-      if (typeof chars.charsOrEmbed === "string") {
+      if (typeof chars.content === "string") {
         for (let index = chars.startIndex; index < chars.endIndex; index++) {
           yield [
             this.text.positionAt(index),
-            chars.charsOrEmbed[index - chars.startIndex],
+            chars.content[index - chars.startIndex],
             chars.format,
           ];
         }
       } else {
         yield [
           this.text.positionAt(chars.startIndex),
-          chars.charsOrEmbed,
+          chars.content,
           chars.format,
         ];
       }

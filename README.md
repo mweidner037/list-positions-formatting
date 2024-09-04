@@ -125,15 +125,15 @@ To create a TimestampMark, use `TimestampFormatting.newMark`.
 
 TimestampFormatting's sort order uses [Lamport timestamps](https://en.wikipedia.org/wiki/Lamport_timestamp), with ties broken by `creatorID`. This sort order works well in general, including in collaborative settings with or without a central server.
 
-### Class RichText
+### Class `RichText<E>`
 
-Convenience wrapper for [Text](https://github.com/mweidner037/list-positions#text) with TimestampFormatting.
+Convenience wrapper for a [Text\<E\>](https://github.com/mweidner037/list-positions#texte) with TimestampFormatting.
 
 RichText has an API similar to a traditional rich-text data structure, combining indexed access, values, and formatting in a single object. E.g., it has a `getFormatAt(index)` method.
 
 Notable methods:
 
-- `insertWithFormat(index, format, ...values)`: Inserts values and applies new formatting marks as needed so that the values have the exact given format. This is a common operation when working with a rich-text editor: the editor tells you to insert some new values and what format they should have.
+- `insertWithFormat(index, format, chars)`: Inserts chars (or an embed) and applies new formatting marks as needed so that the chars have the exact given format. This is a common operation when working with a rich-text editor: the editor tells you to insert some new chars and what format they should have.
 - `format(startIndex, endIndex, key, value, expand?)`: Formats the slice from `startIndex` to `endIndex` so that the given format key maps to `value`, by adding a new mark.
 - `formattedChars()`: Returns an efficient representation of the text's characters and their current formatting. It is similar to [Quill's Delta format](https://quilljs.com/docs/delta/).
 

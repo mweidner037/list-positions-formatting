@@ -127,7 +127,7 @@ TimestampFormatting's sort order uses [Lamport timestamps](https://en.wikipedia.
 
 ### Class `RichText<E>`
 
-Convenience wrapper for [Text\<E\>](https://github.com/mweidner037/list-positions#texte) with TimestampFormatting.
+Convenience wrapper for a [Text\<E\>](https://github.com/mweidner037/list-positions#texte) with TimestampFormatting.
 
 RichText has an API similar to a traditional rich-text data structure, combining indexed access, values, and formatting in a single object. E.g., it has a `getFormatAt(index)` method.
 
